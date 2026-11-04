@@ -1,0 +1,52 @@
+# ==============================================================================
+# BetMetrics Backend - Contexto estricto para ./backend/Dockerfile
+# ==============================================================================
+
+# Secretos y variables de entorno
+.env
+.env.*
+*.env
+!.env.example
+
+# Entornos virtuales de Python
+venv/
+.venv/
+ENV/
+env/
+
+# Bytecode y cachés de Python
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*$py.class
+*.so
+
+# Pruebas, cobertura y linters
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+tests/
+tests.http
+
+# Logs, bases de datos locales y documentación
+logs/
+*.log
+dump.rdb
+*.md
+Dockerfile*
+docker-compose*
+
+# Archivos de sistema e IDE
+.git
+.gitignore
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+

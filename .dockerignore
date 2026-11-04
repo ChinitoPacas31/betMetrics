@@ -1,0 +1,69 @@
+# ==============================================================================
+# BetMetrics - Root .dockerignore
+# Evita filtración de secretos, historial Git y artefactos pesados en el build context
+# ==============================================================================
+
+# Control de versiones
+.git
+.gitignore
+.gitattributes
+.github/
+
+# Documentación y pruebas locales
+*.md
+README.md
+tests.http
+LICENSE
+
+# Secretos y variables de entorno (OWASP Security Hardening)
+.env
+.env.*
+*.env
+!**/.env.example
+.env.local
+.env.*.local
+
+# Dependencias y artefactos de Node.js / Next.js
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+out/
+**/out/
+dist/
+build/
+coverage/
+.pnpm-store/
+*.tsbuildinfo
+
+# Entornos virtuales y artefactos de Python
+venv/
+**/venv/
+.venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+**/.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+
+# Datos de infraestructura local y logs
+redis_data/
+data/
+logs/
+*.log
+dump.rdb
+
+# Sistema operativo e IDEs
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
