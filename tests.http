@@ -1,78 +1,84 @@
 ### ============================================================================
 ### BetMetrics - Suite de Pruebas REST Client (VS Code)
 ### Asegúrate de tener el backend corriendo en http://localhost:8000
-### Token por defecto en backend/.env.example: betmetrics-super-secret-admin-token-2026
+### Reemplaza @adminToken con el API_SECRET_TOKEN configurado en tu archivo .env raíz
 ### ============================================================================
 
 @baseUrl = http://localhost:8000/api/v1
-@adminToken = betmetrics-super-secret-admin-token-2026
+@adminToken = reemplaza-con-tu-token-secreto-administrativo
 
 ### 0. Healthcheck del Servicio
 GET http://localhost:8000/health
 Accept: application/json
 
 ### ============================================================================
-### 1. GET /api/v1/odds/ev - Obtener cuotas y análisis +EV (Éxito 200 OK)
+### 1. GET /api/v1/odds/sports - Catálogo dinámico real de ligas activas (200 OK)
 ### ============================================================================
-GET {{baseUrl}}/odds/ev?sport=soccer_epl&stake=100
+GET {{baseUrl}}/odds/sports
 Accept: application/json
 
 ### ============================================================================
-### 2. POST /api/v1/calculations/ev - Cálculo manual +EV con datos válidos (Éxito 201 Created)
+### 2. GET /api/v1/odds/ev - Obtener cuotas reales y análisis +EV (200 OK)
+### ============================================================================
+GET {{baseUrl}}/odds/ev?sport=soccer_mexico_ligamx&stake=100
+Accept: application/json
+
+### ============================================================================
+### 3. POST /api/v1/calculations/ev - Cálculo manual +EV con datos válidos (201 Created)
 ### Caso Green (+EV > 3.0%): Cuota 2.20, Probabilidad Real 0.50 -> EV% = +10.0%
 ### ============================================================================
 POST {{baseUrl}}/calculations/ev
 Content-Type: application/json
 
 {
-  "match_name": "Real Madrid vs Manchester City",
+  "match_name": "Querétaro vs Puebla",
   "decimal_odds": 2.20,
   "true_probability": 0.50,
   "stake": 100.0
 }
 
 ### ============================================================================
-### 3. POST /api/v1/calculations/ev - Cálculo manual +EV Zona Neutral (Éxito 201 Created)
+### 4. POST /api/v1/calculations/ev - Cálculo manual +EV Zona Neutral (201 Created)
 ### Caso Yellow (0.0% <= EV% <= 3.0%): Cuota 2.02, Probabilidad Real 0.50 -> EV% = +1.0%
 ### ============================================================================
 POST {{baseUrl}}/calculations/ev
 Content-Type: application/json
 
 {
-  "match_name": "Arsenal vs Liverpool",
+  "match_name": "León vs Guadalajara",
   "decimal_odds": 2.02,
   "true_probability": 0.50,
   "stake": 50.0
 }
 
 ### ============================================================================
-### 4. POST /api/v1/calculations/ev - Datos inválidos: Stake negativo y Probabilidad > 1
+### 5. POST /api/v1/calculations/ev - Datos inválidos: Stake negativo y Probabilidad > 1
 ### Esperado: 400 Bad Request (Validación Pydantic sin exponer stack trace)
 ### ============================================================================
 POST {{baseUrl}}/calculations/ev
 Content-Type: application/json
 
 {
-  "match_name": "Barcelona vs Bayern Munich",
+  "match_name": "Pumas vs América",
   "decimal_odds": 1.95,
   "true_probability": 1.35,
   "stake": -50.0
 }
 
 ### ============================================================================
-### 5. POST /api/v1/admin/sync-odds - Sin cabecera Authorization
+### 6. POST /api/v1/admin/sync-odds - Sin cabecera Authorization
 ### Esperado: 401 Unauthorized
 ### ============================================================================
 POST {{baseUrl}}/admin/sync-odds
 Content-Type: application/json
 
 {
-  "sport": "soccer_epl",
+  "sport": "soccer_mexico_ligamx",
   "force_invalidate": true
 }
 
 ### ============================================================================
-### 6. POST /api/v1/admin/sync-odds - Con Token Bearer inválido
+### 7. POST /api/v1/admin/sync-odds - Con Token Bearer inválido
 ### Esperado: 401 Unauthorized
 ### ============================================================================
 POST {{baseUrl}}/admin/sync-odds
@@ -80,20 +86,19 @@ Authorization: Bearer token-invalido-12345
 Content-Type: application/json
 
 {
-  "sport": "soccer_epl",
+  "sport": "soccer_mexico_ligamx",
   "force_invalidate": true
 }
 
 ### ============================================================================
-### 7. POST /api/v1/admin/sync-odds - Con Token Bearer válido
-### Esperado: 200 OK (Invalida caché y sincroniza cuotas)
+### 8. POST /api/v1/admin/sync-odds - Con Token Bearer válido
+### Esperado: 200 OK (Invalida caché fresca y sincroniza cuotas reales)
 ### ============================================================================
 POST {{baseUrl}}/admin/sync-odds
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
-  "sport": "soccer_epl",
+  "sport": "soccer_mexico_ligamx",
   "force_invalidate": true
 }
-
