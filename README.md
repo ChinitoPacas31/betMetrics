@@ -17,7 +17,6 @@ betMetrics/
 ├── README.md
 ├── tests.http
 ├── backend/
-│   ├── .env.example
 │   ├── .dockerignore
 │   ├── requirements.txt
 │   ├── Dockerfile
@@ -41,8 +40,7 @@ betMetrics/
 │               ├── calculation.py      # POST /calculations/ev
 │               └── admin.py            # POST /admin/sync-odds (protegido)
 └── frontend/
-    ├── .env.example
-    ├── next.config.js                  # Optimización de caché en memoria para Windows/OneDrive
+    ├── next.config.js                  # Carga de .env raíz y caché en RAM para Windows/OneDrive
     ├── tailwind.config.ts              # Sistema de color oscuro + Azul Eléctrico (#2563EB)
     ├── public/
     │   ├── logo.png                    # Isotipo oficial BM transparente
@@ -97,7 +95,6 @@ En una nueva terminal:
 
 ```bash
 cd frontend
-cp .env.example .env.local
 npm install
 npm run dev
 ```
