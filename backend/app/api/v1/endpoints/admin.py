@@ -22,8 +22,8 @@ async def sync_odds_cache(
     """
     Endpoint administrativo protegido por HTTPBearer.
     1. Rechaza con 401 Unauthorized si no se incluye un token Bearer válido.
-    2. Invalida la caché en Redis para el deporte solicitado.
-    3. Fuerza la consulta hacia el proveedor externo o rehidrata la caché.
+    2. Invalida la caché fresca en Redis para el deporte solicitado.
+    3. Fuerza la consulta en vivo hacia RapidAPI (o informa si se preservó el respaldo Stale en caso de 429).
     """
     request_data = payload or SyncOddsRequest()
     cache_invalidated = False
@@ -36,12 +36,15 @@ async def sync_odds_cache(
         force_refresh=True,
     )
 
+    sync_status = (
+        "stale_cache_preserved" if source.startswith("redis_stale") else "synchronized"
+    )
+
     return SyncOddsResponse(
-        status="synchronized",
+        status=sync_status,
         sport=request_data.sport,
         cache_invalidated=cache_invalidated,
         synced_matches=len(matches),
         source=source,
         timestamp=datetime.now(timezone.utc),
     )
-

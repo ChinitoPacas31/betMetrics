@@ -58,6 +58,17 @@ def create_application() -> FastAPI:
     # Registro de manejadores globales de excepciones (OWASP compliance)
     register_exception_handlers(app)
 
+    # Ruta raíz informativa que redirige a la documentación interactiva Swagger
+    @app.get(
+        "/",
+        tags=["Root"],
+        summary="Redirección a la documentación interactiva",
+        include_in_schema=False,
+    )
+    async def root():
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url="/docs")
+
     # Ruta pública de Healthcheck (exenta de autenticación Bearer y registrada antes de /api/v1)
     @app.get(
         "/health",

@@ -5,157 +5,259 @@ import httpx
 from app.core.config import settings
 from app.core.exceptions import ExternalServiceUnavailableError
 from app.schemas.ev_schemas import EVCalculationRequest
-from app.schemas.odds_schemas import MatchOddsEVItem, OddsEVListResponse
+from app.schemas.odds_schemas import (
+    MarketOutcomeEVItem,
+    MatchOddsEVItem,
+    OddsEVListResponse,
+    SportCatalogItem,
+)
 from app.services.ev_calculator import EVCalculatorService
 from app.services.redis_cache import redis_cache_service
 
 logger = logging.getLogger("betmetrics.rapidapi")
 
-# Semilla resiliente utilizada para pre-poblar caché o responder cuando no se ha configurado
-# una RAPIDAPI_KEY real o se alcanza el límite HTTP 429 de RapidAPI.
-DEFAULT_SEED_MATCHES: List[Dict[str, Any]] = [
-    {
-        "match_id": "epl-2026-ars-che",
-        "sport_key": "soccer_epl",
-        "league": "Premier League",
-        "home_team": "Arsenal",
-        "away_team": "Chelsea",
-        "commence_time": "2026-11-07T17:30:00Z",
-        "bookmaker": "Pinnacle",
-        "selection": "Arsenal (Home Win)",
-        "decimal_odds": 2.15,
-        "true_probability": 0.52,
-    },
-    {
-        "match_id": "epl-2026-liv-mci",
-        "sport_key": "soccer_epl",
-        "league": "Premier League",
-        "home_team": "Liverpool",
-        "away_team": "Manchester City",
-        "commence_time": "2026-11-08T16:30:00Z",
-        "bookmaker": "Bet365",
-        "selection": "Liverpool (Home Win)",
-        "decimal_odds": 2.45,
-        "true_probability": 0.415,
-    },
-    {
-        "match_id": "epl-2026-mun-tot",
-        "sport_key": "soccer_epl",
-        "league": "Premier League",
-        "home_team": "Manchester United",
-        "away_team": "Tottenham Hotspur",
-        "commence_time": "2026-11-08T19:00:00Z",
-        "bookmaker": "DraftKings",
-        "selection": "Manchester United (Home Win)",
-        "decimal_odds": 2.10,
-        "true_probability": 0.43,
-    },
-    {
-        "match_id": "ucl-2026-rma-bay",
-        "sport_key": "soccer_epl",
-        "league": "UEFA Champions League",
-        "home_team": "Real Madrid",
-        "away_team": "Bayern Munich",
-        "commence_time": "2026-11-10T20:00:00Z",
-        "bookmaker": "FanDuel",
-        "selection": "Real Madrid (Home Win)",
-        "decimal_odds": 2.30,
-        "true_probability": 0.48,
-    },
-    {
-        "match_id": "nba-2026-bos-lal",
-        "sport_key": "soccer_epl",
-        "league": "NBA Regular Season",
-        "home_team": "Boston Celtics",
-        "away_team": "Los Angeles Lakers",
-        "commence_time": "2026-11-09T01:30:00Z",
-        "bookmaker": "BetMGM",
-        "selection": "Boston Celtics -4.5",
-        "decimal_odds": 1.92,
-        "true_probability": 0.525,
-    },
-    {
-        "match_id": "laliga-2026-bar-atm",
-        "sport_key": "soccer_epl",
-        "league": "LaLiga EA Sports",
-        "home_team": "FC Barcelona",
-        "away_team": "Atlético de Madrid",
-        "commence_time": "2026-11-09T20:00:00Z",
-        "bookmaker": "William Hill",
-        "selection": "Draw",
-        "decimal_odds": 3.40,
-        "true_probability": 0.25,
-    },
-]
+# Casas de apuestas de referencia institucional (bajo margen) usadas para ponderar el de-vigging
+SHARP_BOOKMAKERS = {
+    "pinnacle",
+    "betfair",
+    "betfair_ex_eu",
+    "betfair_ex_uk",
+    "matchbook",
+    "lowvig",
+    "marathonbet",
+}
 
 
 class RapidAPIClientService:
     """
-    Cliente asíncrono con httpx para consumir cuotas desde RapidAPI.
-    Maneja timeouts, errores HTTP 429 (Rate Limit) y caídas de red,
-    integrándose con Redis para retornar datos cacheados con `"cached": true`.
+    Cliente asíncrono 100% real (cero datos mockeados o inventados) para The Odds API vía RapidAPI.
+    Estrategia ante HTTP 429 (Rate Limit) o caída de red:
+      1. Caché Fresca en Redis (TTL 5 min) para no agotar la cuota en navegación normal.
+      2. Respaldo Stale-If-Error en Redis (TTL 24h) con la última captura REAL si RapidAPI devuelve 429.
+      3. Si no existe ninguna captura real previa en Redis y RapidAPI falla/429, responde HTTP 503 honesto.
     """
 
-    TIMEOUT_SECONDS = 6.0
+    TIMEOUT_SECONDS = 8.0
+
+    @classmethod
+    def _ensure_api_key_configured(cls) -> None:
+        if not settings.RAPIDAPI_KEY or not settings.RAPIDAPI_KEY.strip():
+            raise ExternalServiceUnavailableError(
+                "RAPIDAPI_KEY no está configurada en las variables de entorno (.env)."
+            )
+
+    @classmethod
+    def _build_headers(cls) -> Dict[str, str]:
+        return {
+            "X-RapidAPI-Key": settings.RAPIDAPI_KEY,
+            "X-RapidAPI-Host": settings.RAPIDAPI_HOST,
+            "Accept": "application/json",
+        }
+
+    @classmethod
+    async def get_sports_catalog(cls) -> List[SportCatalogItem]:
+        """
+        Obtiene dinámicamente desde RapidAPI (`GET /v4/sports`) todas las ligas y deportes
+        activos en este momento, sin listas hardcodeadas.
+        """
+        fresh = await redis_cache_service.get_fresh_sports()
+        if fresh is not None:
+            return [SportCatalogItem(**item) for item in fresh]
+
+        cls._ensure_api_key_configured()
+        url = f"https://{settings.RAPIDAPI_HOST}/v4/sports"
+
+        try:
+            async with httpx.AsyncClient(timeout=cls.TIMEOUT_SECONDS) as client:
+                response = await client.get(
+                    url, headers=cls._build_headers(), params={"all": "false"}
+                )
+                if response.status_code == 429:
+                    raise httpx.HTTPStatusError(
+                        "RapidAPI quota exceeded (HTTP 429)",
+                        request=response.request,
+                        response=response,
+                    )
+                response.raise_for_status()
+                raw_sports = response.json()
+                if not isinstance(raw_sports, list):
+                    raise ValueError("Formato inesperado en /v4/sports de RapidAPI.")
+
+            catalog: List[Dict[str, str]] = []
+            for item in raw_sports:
+                if not item.get("active", False) or item.get("has_outrights", False):
+                    continue
+                s_key = str(item.get("key", "")).strip()
+                if not s_key:
+                    continue
+                group = str(item.get("group") or "Sports").strip()
+                title = str(item.get("title") or s_key).strip()
+                description = str(item.get("description") or group).strip()
+                market_type = "h2h_3way" if s_key.startswith("soccer") else "h2h_2way"
+                catalog.append(
+                    {
+                        "sport_key": s_key,
+                        "title": title,
+                        "category": group,
+                        "country": description,
+                        "market_type": market_type,
+                    }
+                )
+
+            await redis_cache_service.set_sports(catalog)
+            return [SportCatalogItem(**item) for item in catalog]
+
+        except (httpx.HTTPStatusError, httpx.HTTPError, ValueError) as exc:
+            logger.warning("Failed fetching /v4/sports from RapidAPI: %s", repr(exc))
+            stale = await redis_cache_service.get_stale_sports()
+            if stale is not None:
+                return [SportCatalogItem(**item) for item in stale]
+
+            if (
+                isinstance(exc, httpx.HTTPStatusError)
+                and exc.response.status_code == 429
+            ):
+                raise ExternalServiceUnavailableError(
+                    "Límite de peticiones agotado en RapidAPI (HTTP 429) al consultar deportes activos y no hay respaldo previo en Redis."
+                ) from exc
+
+            raise ExternalServiceUnavailableError(
+                "No fue posible obtener el catálogo de deportes activos desde RapidAPI ni desde Redis."
+            ) from exc
 
     @classmethod
     def _normalize_rapidapi_payload(
         cls, raw_events: List[Dict[str, Any]], sport: str
     ) -> List[Dict[str, Any]]:
+        """
+        Procesa exclusivamente los eventos reales devueltos por RapidAPI.
+        Si la liga no tiene partidos activos o cuotas H2H disponibles hoy, devuelve `[]` honestamente.
+        """
+        expected_3way = sport.startswith("soccer")
         normalized: List[Dict[str, Any]] = []
-        for idx, event in enumerate(raw_events[:12]):
-            home_team = event.get("home_team", f"Home Team {idx + 1}")
-            away_team = event.get("away_team", f"Away Team {idx + 1}")
-            bookmakers = event.get("bookmakers", [])
-            decimal_odds = 2.10
-            bookmaker_title = "Market Consensus"
 
-            if bookmakers and isinstance(bookmakers, list):
-                first_bookie = bookmakers[0]
-                bookmaker_title = first_bookie.get("title", bookmaker_title)
-                markets = first_bookie.get("markets", [])
-                if markets and markets[0].get("outcomes"):
-                    price = markets[0]["outcomes"][0].get("price", 2.10)
-                    if isinstance(price, (int, float)) and price > 1.01:
-                        decimal_odds = float(price)
+        for event in raw_events:
+            match_id = str(event.get("id") or "").strip()
+            home_team = str(event.get("home_team") or "").strip()
+            away_team = str(event.get("away_team") or "").strip()
+            if not match_id or not home_team or not away_team:
+                continue
 
-            # Estimación de probabilidad real basada en consenso sharp simulado
-            implied_prob = 1.0 / decimal_odds
-            edge_offsets = [0.045, 0.012, -0.035, 0.038, 0.005, -0.042]
-            true_prob = min(max(implied_prob + edge_offsets[idx % len(edge_offsets)], 0.05), 0.92)
+            bookmakers = event.get("bookmakers") or []
+            if not isinstance(bookmakers, list) or len(bookmakers) == 0:
+                continue
 
+            weighted_prob_sums: Dict[str, float] = {"1": 0.0, "X": 0.0, "2": 0.0}
+            weight_totals: Dict[str, float] = {"1": 0.0, "X": 0.0, "2": 0.0}
+            best_prices: Dict[str, Tuple[float, str]] = {}
+            valid_bookies_count = 0
+
+            for bookie in bookmakers:
+                b_key = str(bookie.get("key", "")).lower()
+                b_title = str(bookie.get("title") or b_key or "Bookmaker")
+                markets = bookie.get("markets") or []
+                h2h_market = next(
+                    (m for m in markets if m.get("key") == "h2h"),
+                    None,
+                )
+                if not h2h_market:
+                    continue
+
+                outcomes_raw = h2h_market.get("outcomes") or []
+                bookie_prices: Dict[str, float] = {}
+                for out in outcomes_raw:
+                    name = str(out.get("name", "")).strip()
+                    price = out.get("price")
+                    if not isinstance(price, (int, float)) or price <= 1.01:
+                        continue
+                    p_val = float(price)
+                    if name == home_team:
+                        bookie_prices["1"] = p_val
+                    elif name == away_team:
+                        bookie_prices["2"] = p_val
+                    elif name.lower() in ("draw", "empate", "tie"):
+                        bookie_prices["X"] = p_val
+
+                if "1" not in bookie_prices or "2" not in bookie_prices:
+                    continue
+
+                valid_bookies_count += 1
+                overround = sum(1.0 / odd for odd in bookie_prices.values())
+                if overround <= 0:
+                    continue
+
+                weight = 3.0 if b_key in SHARP_BOOKMAKERS else 1.0
+                for k, odd in bookie_prices.items():
+                    fair_p = (1.0 / odd) / overround
+                    weighted_prob_sums[k] += fair_p * weight
+                    weight_totals[k] += weight
+                    current_best = best_prices.get(k)
+                    if current_best is None or odd > current_best[0]:
+                        best_prices[k] = (odd, b_title)
+
+            has_draw = expected_3way and ("X" in best_prices)
+            outcome_keys = ["1", "X", "2"] if has_draw else ["1", "2"]
+            market_type = "h2h_3way" if has_draw else "h2h_2way"
+
+            if not all(k in best_prices for k in outcome_keys):
+                continue
+
+            raw_true_probs: Dict[str, float] = {}
+            for k in outcome_keys:
+                if weight_totals[k] > 0:
+                    raw_true_probs[k] = weighted_prob_sums[k] / weight_totals[k]
+                else:
+                    raw_true_probs[k] = 1.0 / best_prices[k][0]
+
+            total_true = sum(raw_true_probs.values()) or 1.0
+            selection_names = {
+                "1": home_team,
+                "X": "Draw",
+                "2": away_team,
+            }
+
+            outcomes_payload: List[Dict[str, Any]] = []
+            for k in outcome_keys:
+                odd_val, bookie_name = best_prices[k]
+                fair_prob = min(max(raw_true_probs[k] / total_true, 0.005), 0.99)
+                outcomes_payload.append(
+                    {
+                        "key": k,
+                        "selection": selection_names[k],
+                        "bookmaker": bookie_name,
+                        "decimal_odds": round(odd_val, 3),
+                        "true_probability": round(fair_prob, 4),
+                    }
+                )
+
+            sport_title = str(event.get("sport_title") or sport)
+            sport_key_val = str(event.get("sport_key") or sport)
+            sport_group_label = sport_key_val.split("_")[0].replace("americanfootball", "American Football").replace("icehockey", "Ice Hockey").title()
             normalized.append(
                 {
-                    "match_id": str(event.get("id", f"{sport}-{idx}")),
-                    "sport_key": event.get("sport_key", sport),
-                    "league": event.get("sport_title", "International Sports"),
+                    "match_id": match_id,
+                    "sport_key": sport_key_val,
+                    "league": sport_title,
+                    "country": sport_group_label,
+                    "market_type": market_type,
+                    "bookmakers_count": valid_bookies_count,
                     "home_team": home_team,
                     "away_team": away_team,
-                    "commence_time": event.get(
-                        "commence_time", datetime.now(timezone.utc).isoformat()
+                    "commence_time": str(
+                        event.get("commence_time")
+                        or datetime.now(timezone.utc).isoformat()
                     ),
-                    "bookmaker": bookmaker_title,
-                    "selection": f"{home_team} (Win)",
-                    "decimal_odds": round(decimal_odds, 2),
-                    "true_probability": round(true_prob, 4),
+                    "outcomes": outcomes_payload,
                 }
             )
-        return normalized or DEFAULT_SEED_MATCHES
+
+        return normalized
 
     @classmethod
     async def _fetch_from_rapidapi(cls, sport: str) -> List[Dict[str, Any]]:
-        if (
-            not settings.RAPIDAPI_KEY
-            or settings.RAPIDAPI_KEY == "your-rapidapi-key-here"
-        ):
-            raise httpx.ConnectError("RAPIDAPI_KEY not configured with a live credential.")
+        cls._ensure_api_key_configured()
 
         url = f"https://{settings.RAPIDAPI_HOST}/v4/sports/{sport}/odds"
-        headers = {
-            "X-RapidAPI-Key": settings.RAPIDAPI_KEY,
-            "X-RapidAPI-Host": settings.RAPIDAPI_HOST,
-            "Accept": "application/json",
-        }
         params = {
             "regions": "eu,uk,us",
             "oddsFormat": "decimal",
@@ -163,12 +265,14 @@ class RapidAPIClientService:
         }
 
         async with httpx.AsyncClient(timeout=cls.TIMEOUT_SECONDS) as client:
-            response = await client.get(url, headers=headers, params=params)
+            response = await client.get(
+                url, headers=cls._build_headers(), params=params
+            )
 
             if response.status_code == 429:
-                logger.warning("RapidAPI rate limit exceeded (HTTP 429).")
+                logger.warning("RapidAPI rate limit exceeded (HTTP 429) for sport=%s.", sport)
                 raise httpx.HTTPStatusError(
-                    "Rate limit exceeded (429)",
+                    "Rate limit exceeded (HTTP 429)",
                     request=response.request,
                     response=response,
                 )
@@ -176,7 +280,7 @@ class RapidAPIClientService:
             response.raise_for_status()
             payload = response.json()
             if not isinstance(payload, list):
-                raise ValueError("Unexpected response format from RapidAPI.")
+                raise ValueError("Formato inesperado de respuesta desde RapidAPI.")
             return cls._normalize_rapidapi_payload(payload, sport)
 
     @classmethod
@@ -184,38 +288,74 @@ class RapidAPIClientService:
         cls, sport: str, force_refresh: bool = False
     ) -> Tuple[List[Dict[str, Any]], bool, str]:
         """
-        Retorna (lista_de_partidos, cached_flag, source_name).
-        1. Si force_refresh es False y existen datos en Redis, retorna desde caché (`cached=True`).
-        2. Si no hay caché o se fuerza sincronización, consulta RapidAPI con httpx.
-        3. Si RapidAPI falla (Timeout, 429 Rate Limit, 5xx o clave demo), recupera de Redis
-           o hidrata la caché con el fallback resiliente (`cached=True`).
+        Flujo 100% libre de mocks:
+        1. Si `force_refresh` es False y existe caché fresca en Redis (TTL 5m), retorna `redis_cache`.
+        2. Si expiró o se fuerza refresh, consulta RapidAPI en vivo -> guarda en `fresh` y `stale`, retorna `rapidapi_live`.
+        3. Si RapidAPI devuelve HTTP 429 o falla:
+           - Si existe captura REAL previa en `stale` Redis (últimas 24h), retorna esa foto real marcando
+             `source="redis_stale_429"` o `"redis_stale_error"` con `cached=True`.
+           - Si NO existe captura previa en Redis, lanza HTTP 503 (`ExternalServiceUnavailableError`) explicando la causa exacta.
         """
         if not force_refresh:
-            cached_matches = await redis_cache_service.get_odds(sport)
-            if cached_matches:
-                return cached_matches, True, "redis_cache"
+            fresh_matches = await redis_cache_service.get_fresh_odds(sport)
+            if fresh_matches is not None:
+                return fresh_matches, True, "redis_cache"
 
         try:
             live_matches = await cls._fetch_from_rapidapi(sport)
             await redis_cache_service.set_odds(sport, live_matches)
             return live_matches, False, "rapidapi_live"
-        except (httpx.TimeoutException, httpx.HTTPStatusError, httpx.HTTPError, ValueError) as exc:
+        except ExternalServiceUnavailableError:
+            raise
+        except (
+            httpx.TimeoutException,
+            httpx.HTTPStatusError,
+            httpx.HTTPError,
+            ValueError,
+        ) as exc:
+            is_rate_limit = (
+                isinstance(exc, httpx.HTTPStatusError)
+                and exc.response.status_code == 429
+            )
+            is_unauthorized = (
+                isinstance(exc, httpx.HTTPStatusError)
+                and exc.response.status_code in (401, 403)
+            )
+
             logger.warning(
-                "RapidAPI fetch failed for sport=%s (%s). Activating Redis/Resilient fallback.",
+                "RapidAPI fetch failed for sport=%s (429=%s, err=%s). Checking Redis stale real snapshot.",
                 sport,
+                is_rate_limit,
                 repr(exc),
             )
-            cached_matches = await redis_cache_service.get_odds(sport)
-            if cached_matches:
-                return cached_matches, True, "redis_cache"
 
-            # Si tampoco había en Redis, sembramos los datos de respaldo en caché y retornamos cached=True
-            if DEFAULT_SEED_MATCHES:
-                await redis_cache_service.set_odds(sport, DEFAULT_SEED_MATCHES)
-                return DEFAULT_SEED_MATCHES, True, "resilient_fallback"
+            stale_matches = await redis_cache_service.get_stale_odds(sport)
+            if stale_matches is not None:
+                fallback_source = (
+                    "redis_stale_429" if is_rate_limit else "redis_stale_error"
+                )
+                return stale_matches, True, fallback_source
+
+            if is_rate_limit:
+                raise ExternalServiceUnavailableError(
+                    f"Cuota de RapidAPI agotada (HTTP 429 Too Many Requests) y no existe caché previa en Redis para '{sport}'."
+                ) from exc
+
+            if is_unauthorized:
+                raise ExternalServiceUnavailableError(
+                    f"RapidAPI rechazó las credenciales (HTTP {exc.response.status_code}). Verifica tu RAPIDAPI_KEY y suscripción a The Odds API."
+                ) from exc
+
+            if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (
+                404,
+                422,
+            ):
+                raise ExternalServiceUnavailableError(
+                    f"La liga o deporte '{sport}' no está disponible o no soporta mercado H2H en RapidAPI (HTTP {exc.response.status_code})."
+                ) from exc
 
             raise ExternalServiceUnavailableError(
-                "External odds API failed (timeout or 429) and no cached fallback is available."
+                f"Error de comunicación con RapidAPI para '{sport}' y no existe respaldo previo en Redis."
             ) from exc
 
     @classmethod
@@ -228,33 +368,66 @@ class RapidAPIClientService:
 
         enriched_items: List[MatchOddsEVItem] = []
         for match in raw_matches:
-            ev_result = EVCalculatorService.calculate_ev(
-                EVCalculationRequest(
-                    match_name=f"{match['home_team']} vs {match['away_team']}",
-                    decimal_odds=float(match["decimal_odds"]),
-                    true_probability=float(match["true_probability"]),
-                    stake=stake,
+            match_title = f"{match['home_team']} vs {match['away_team']}"
+            raw_outcomes = match.get("outcomes") or []
+            if not raw_outcomes:
+                continue
+
+            outcome_items: List[MarketOutcomeEVItem] = []
+            for raw_out in raw_outcomes:
+                ev_calc = EVCalculatorService.calculate_ev(
+                    EVCalculationRequest(
+                        match_name=match_title,
+                        decimal_odds=float(raw_out["decimal_odds"]),
+                        true_probability=float(raw_out["true_probability"]),
+                        stake=stake,
+                    )
                 )
-            )
+                outcome_items.append(
+                    MarketOutcomeEVItem(
+                        key=str(raw_out["key"]),
+                        selection=str(raw_out["selection"]),
+                        bookmaker=str(raw_out["bookmaker"]),
+                        decimal_odds=ev_calc.decimal_odds,
+                        implied_probability=ev_calc.implied_probability,
+                        true_probability=ev_calc.true_probability,
+                        stake=ev_calc.stake,
+                        potential_profit=ev_calc.potential_profit,
+                        expected_value=ev_calc.expected_value,
+                        ev_percentage=ev_calc.ev_percentage,
+                        traffic_light=ev_calc.traffic_light,
+                        recommendation=ev_calc.recommendation,
+                    )
+                )
+
+            best_outcome = max(outcome_items, key=lambda item: item.ev_percentage)
+
             enriched_items.append(
                 MatchOddsEVItem(
                     match_id=match["match_id"],
                     sport_key=match.get("sport_key", sport),
-                    league=match.get("league", "Premier League"),
+                    league=match.get("league", sport),
+                    country=match.get("country", ""),
+                    market_type=match.get(
+                        "market_type",
+                        "h2h_3way" if len(outcome_items) == 3 else "h2h_2way",
+                    ),
+                    bookmakers_count=int(match.get("bookmakers_count", 1)),
                     home_team=match["home_team"],
                     away_team=match["away_team"],
                     commence_time=match["commence_time"],
-                    bookmaker=match["bookmaker"],
-                    selection=match["selection"],
-                    decimal_odds=ev_result.decimal_odds,
-                    implied_probability=ev_result.implied_probability,
-                    true_probability=ev_result.true_probability,
-                    stake=ev_result.stake,
-                    potential_profit=ev_result.potential_profit,
-                    expected_value=ev_result.expected_value,
-                    ev_percentage=ev_result.ev_percentage,
-                    traffic_light=ev_result.traffic_light,
-                    recommendation=ev_result.recommendation,
+                    bookmaker=best_outcome.bookmaker,
+                    selection=best_outcome.selection,
+                    decimal_odds=best_outcome.decimal_odds,
+                    implied_probability=best_outcome.implied_probability,
+                    true_probability=best_outcome.true_probability,
+                    stake=best_outcome.stake,
+                    potential_profit=best_outcome.potential_profit,
+                    expected_value=best_outcome.expected_value,
+                    ev_percentage=best_outcome.ev_percentage,
+                    traffic_light=best_outcome.traffic_light,
+                    recommendation=best_outcome.recommendation,
+                    outcomes=outcome_items,
                 )
             )
 
@@ -269,4 +442,3 @@ class RapidAPIClientService:
 
 
 rapidapi_client_service = RapidAPIClientService()
-

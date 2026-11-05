@@ -8,11 +8,13 @@ class Settings(BaseSettings):
 
     PORT: int = 8000
     ENVIRONMENT: str = "development"
-    API_SECRET_TOKEN: str = "betmetrics-super-secret-admin-token-2026"
-    RAPIDAPI_KEY: str = "your-rapidapi-key-here"
+    API_SECRET_TOKEN: str = ""
+    RAPIDAPI_KEY: str = ""
     RAPIDAPI_HOST: str = "odds.p.rapidapi.com"
     REDIS_URL: str = "redis://localhost:6379/0"
     CACHE_TTL_SECONDS: int = 300
+    STALE_CACHE_TTL_SECONDS: int = 86400
+    SPORTS_CACHE_TTL_SECONDS: int = 3600
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
@@ -32,4 +34,3 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
-
