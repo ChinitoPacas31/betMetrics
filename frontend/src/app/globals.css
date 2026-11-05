@@ -7,6 +7,46 @@
 }
 
 body {
-  @apply bg-slate-950 text-slate-100 antialiased selection:bg-emerald-500 selection:text-slate-950;
+  background-color: #0a0d14;
+  color: #f1f5f9;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+::selection {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Scrollbars delgados tipo terminal / sportsbook */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0e131d;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #243047;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334363;
+}
+
+/* Ocultar flechas nativas molestas en inputs numéricos compactos */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}

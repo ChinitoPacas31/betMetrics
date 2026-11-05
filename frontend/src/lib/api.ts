@@ -3,6 +3,8 @@ import {
   EVCalculationRequest,
   EVCalculationResponse,
   OddsEVListResponse,
+  SportCatalogItem,
+  SyncOddsResponse,
 } from "@/types";
 
 const API_BASE_URL =
@@ -37,10 +39,10 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 /**
- * Consume GET /api/v1/odds/ev para obtener las cuotas con análisis +EV y semáforo.
+ * Consume GET /api/v1/odds/ev para obtener las cuotas reales con análisis +EV y semáforo.
  */
 export async function fetchOddsEV(
-  sport: string = "soccer_epl",
+  sport: string,
   stake: number = 100
 ): Promise<OddsEVListResponse> {
   const params = new URLSearchParams({
@@ -57,6 +59,21 @@ export async function fetchOddsEV(
   });
 
   return handleResponse<OddsEVListResponse>(response);
+}
+
+/**
+ * Consume GET /api/v1/odds/sports para listar dinámicamente el catálogo de deportes activos en RapidAPI.
+ */
+export async function fetchSportsCatalog(): Promise<SportCatalogItem[]> {
+  const response = await fetch(`${API_BASE_URL}/odds/sports`, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+
+  return handleResponse<SportCatalogItem[]>(response);
 }
 
 /**
@@ -77,3 +94,26 @@ export async function calculateCustomEV(
   return handleResponse<EVCalculationResponse>(response);
 }
 
+/**
+ * Consume POST /api/v1/admin/sync-odds (protegido con Bearer Token) para invalidar caché fresca en Redis.
+ */
+export async function syncOddsCache(
+  sport: string,
+  adminToken: string,
+  forceInvalidate: boolean = true
+): Promise<SyncOddsResponse> {
+  const response = await fetch(`${API_BASE_URL}/admin/sync-odds`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${adminToken.trim()}`,
+    },
+    body: JSON.stringify({
+      sport,
+      force_invalidate: forceInvalidate,
+    }),
+  });
+
+  return handleResponse<SyncOddsResponse>(response);
+}

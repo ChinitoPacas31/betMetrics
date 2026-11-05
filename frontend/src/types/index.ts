@@ -1,4 +1,6 @@
 export type TrafficLightColor = "GREEN" | "YELLOW" | "RED";
+export type OddsFormat = "DECIMAL" | "AMERICAN";
+export type BetSettlementStatus = "PENDING" | "WON" | "LOST" | "PUSH";
 
 export interface EVCalculationRequest {
   match_name?: string;
@@ -20,10 +22,28 @@ export interface EVCalculationResponse {
   recommendation: string;
 }
 
+export interface MarketOutcomeEVItem {
+  key: string; // "1" | "X" | "2"
+  selection: string;
+  bookmaker: string;
+  decimal_odds: number;
+  implied_probability: number;
+  true_probability: number;
+  stake: number;
+  potential_profit: number;
+  expected_value: number;
+  ev_percentage: number;
+  traffic_light: TrafficLightColor;
+  recommendation: string;
+}
+
 export interface MatchOddsEVItem {
   match_id: string;
   sport_key: string;
   league: string;
+  country?: string;
+  market_type?: "h2h_3way" | "h2h_2way" | string;
+  bookmakers_count?: number;
   home_team: string;
   away_team: string;
   commence_time: string;
@@ -38,6 +58,7 @@ export interface MatchOddsEVItem {
   ev_percentage: number;
   traffic_light: TrafficLightColor;
   recommendation: string;
+  outcomes?: MarketOutcomeEVItem[];
 }
 
 export interface OddsEVListResponse {
@@ -49,6 +70,57 @@ export interface OddsEVListResponse {
   items: MatchOddsEVItem[];
 }
 
+export interface SportCatalogItem {
+  sport_key: string;
+  title: string;
+  category: string;
+  country: string;
+  market_type: string;
+}
+
+export interface SyncOddsResponse {
+  status: string;
+  sport: string;
+  cache_invalidated: boolean;
+  synced_matches: number;
+  source: string;
+  timestamp: string;
+}
+
+export interface SlipSelection {
+  matchId: string;
+  matchName: string;
+  league: string;
+  sportKey: string;
+  commenceTime: string;
+  outcomeKey: string;
+  selection: string;
+  bookmaker: string;
+  decimalOdds: number;
+  consensusProbability: number;
+}
+
+export interface PaperBetRecord {
+  id: string;
+  placedAt: string;
+  settledAt?: string;
+  matchId: string;
+  matchName: string;
+  league: string;
+  selection: string;
+  outcomeKey: string;
+  bookmaker: string;
+  decimalOdds: number;
+  impliedProbability: number;
+  trueProbability: number;
+  stake: number;
+  potentialProfit: number;
+  expectedValue: number;
+  evPercentage: number;
+  trafficLight: TrafficLightColor;
+  status: BetSettlementStatus;
+}
+
 export interface ApiErrorPayload {
   error: string;
   message: string;
@@ -57,4 +129,3 @@ export interface ApiErrorPayload {
     message: string;
   }>;
 }
-
