@@ -1,23 +1,24 @@
 import EVCalculatorForm from "@/components/EVCalculatorForm";
+import { IconCalculator } from "@/components/Icons";
 
 export default function CalculatorPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <span className="inline-flex items-center rounded-md bg-emerald-500/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-400 ring-1 ring-emerald-500/30">
-          Paper Betting Simulator
-        </span>
-        <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
-          Calculadora Manual de Valor Esperado (+EV)
-        </h1>
-        <p className="mt-1 text-sm text-slate-400">
-          Simula cualquier escenario de apuesta enviando los datos al endpoint
-          validado <code>POST /api/v1/calculations/ev</code>.
-        </p>
+    <div className="space-y-4 pb-10">
+      <div className="flex items-center gap-3 rounded-lg border border-sb-border bg-sb-panel p-4">
+        <div className="flex h-9 w-9 items-center justify-center rounded-md border border-blue-500/35 bg-sb-blue/15 text-blue-400">
+          <IconCalculator className="h-4 w-4" />
+        </div>
+        <div>
+          <h1 className="text-lg font-extrabold tracking-tight text-white">
+            Calculadora Cuantitativa +EV &amp; Criterio de Kelly
+          </h1>
+          <p className="text-xs text-slate-400">
+            Evalúa momios en formato Americano o Decimal contra tu probabilidad real y registra la operación en tu Bankroll virtual.
+          </p>
+        </div>
       </div>
 
       <EVCalculatorForm />
     </div>
   );
 }
-
