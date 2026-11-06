@@ -1,0 +1,667 @@
+% ============================================================
+%  BetMetrics – Reporte del Sistema de Autenticación
+%  Compilar: pdflatex auth-report.tex  (dos pasadas)
+% ============================================================
+\documentclass[12pt,a4paper]{article}
+
+% ── Paquetes ─────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{microtype}
+\usepackage{parskip}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
+\usepackage{pgf-umlsd}   % diagramas de secuencia
+
+% ── Colores del proyecto ──────────────────────────────────────
+\definecolor{betgreen}{RGB}{34,197,94}
+\definecolor{betyellow}{RGB}{234,179,8}
+\definecolor{betred}{RGB}{239,68,68}
+\definecolor{betblue}{RGB}{59,130,246}
+\definecolor{betgray}{RGB}{107,114,128}
+\definecolor{codebg}{RGB}{248,249,250}
+\definecolor{codefg}{RGB}{31,41,55}
+
+% ── Estilo de código ──────────────────────────────────────────
+\lstdefinestyle{betcode}{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small\color{codefg},
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{betgray!40},
+  keywordstyle=\color{betblue}\bfseries,
+  commentstyle=\color{betgray}\itshape,
+  stringstyle=\color{betgreen},
+  numbers=left,
+  numberstyle=\tiny\color{betgray},
+  xleftmargin=1.5em,
+}
+\lstset{style=betcode}
+
+% ── Encabezado / pie ─────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{betblue}{\textbf{BetMetrics}}}
+\fancyhead[R]{\small Reporte de Autenticación}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ── Formato de secciones ─────────────────────────────────────
+\titleformat{\section}{\large\bfseries\color{betblue}}{}{0em}{\thesection\quad}
+\titleformat{\subsection}{\normalsize\bfseries\color{betgray!80!black}}{}{0em}{\thesubsection\quad}
+
+% ── Metadatos PDF ─────────────────────────────────────────────
+\hypersetup{
+  pdftitle={BetMetrics – Reporte del Sistema de Autenticación},
+  pdfauthor={Equipo BetMetrics},
+  colorlinks=true,
+  linkcolor=betblue,
+  urlcolor=betblue,
+  citecolor=betblue,
+}
+
+% ── Comandos de utilidad ─────────────────────────────────────
+\newcommand{\claim}[2]{\texttt{#1} & #2 \\}
+\newcommand{\endpoint}[2]{\texttt{\textbf{#1}} & #2 \\}
+\newcommand{\pro}[1]{\textcolor{betgreen}{$\checkmark$}~#1}
+\newcommand{\con}[1]{\textcolor{betred}{$\times$}~#1}
+
+% ═══════════════════════════════════════════════════════════════
+\begin{document}
+
+% ── Portada ───────────────────────────────────────────────────
+\begin{titlepage}
+  \centering
+  \vspace*{2cm}
+  {\Huge\bfseries\color{betblue} BetMetrics}\par\vspace{0.4em}
+  {\Large\color{betgray} Reporte del Sistema de Autenticación}\par\vspace{2em}
+  \rule{\textwidth}{0.4pt}\par\vspace{1em}
+  {\normalsize
+    Proyecto: Escáner de apuestas +EV desacoplado\\
+    Stack: FastAPI · PostgreSQL · Redis · Next.js 14\\
+    Repositorio: \url{https://github.com/tu-org/betMetrics}
+  }\par\vspace{1em}
+  \rule{\textwidth}{0.4pt}\par\vspace{2em}
+  {\large Actividad 4 — Sistema de Autenticación}\par\vspace{0.5em}
+  {\normalsize Noviembre 2026}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ═══════════════════════════════════════════════════════════════
+\section{Mecanismo de Autenticación}
+\label{sec:mechanism}
+
+\subsection{¿Qué se usó y por qué?}
+
+BetMetrics implementa autenticación propia basada en \textbf{JSON Web Tokens (JWT)} con firma
+simétrica \texttt{HS256}.  No se delega a ningún proveedor externo (Auth0, Firebase, Google Sign-In, etc.).
+
+La elección se sustentó en tres criterios:
+
+\begin{enumerate}
+  \item \textbf{Sin estado (\textit{stateless})}. El token carga el identificador del usuario (\texttt{sub})
+        y su expiración; el backend valida criptográficamente sin consultar una tabla de sesiones.
+        Esto encaja con la arquitectura de microservicio de BetMetrics, donde el backend es
+        reemplazable horizontalmente.
+  \item \textbf{Control total sobre el modelo de datos}.  El proyecto almacena campos propios
+        (\texttt{starting\_bankroll}, \texttt{odds\_format}) que no ofrece ningún proveedor externo
+        sin personalización adicional.
+  \item \textbf{Simplicidad operativa}.  Añadir un proveedor OAuth 2.0 implica registrar una
+        aplicación, gestionar \textit{client\_id}/\textit{client\_secret} y depender de una tercera
+        infraestructura.  Para el alcance académico del proyecto la solución propia es suficiente.
+\end{enumerate}
+
+\subsection{Implementación propia vs.\ tercero}
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{p{3.5cm} p{5cm} p{5cm}}
+\toprule
+ & \textbf{Implementación propia (BetMetrics)} & \textbf{Tercero (p.ej.\ Auth0)} \\
+\midrule
+\pro{Control total} & Modelo de datos libre & Limitado a su esquema \\
+\pro{Sin costos externos} & Gratis en cualquier escala & Plan gratuito con límites de MAU \\
+\pro{Sin dependencia externa} & Funciona offline/docker-only & Requiere Internet \\[4pt]
+\con{Responsabilidad de seguridad} & El equipo gestiona hashing, rotación, etc. & Auditado por el proveedor \\
+\con{Sin SSO nativo} & Solo email/contraseña & Google, GitHub, SAML, etc. \\
+\con{Sin MFA incluido} & Debe implementarse manualmente & Incluido en muchos planes \\
+\bottomrule
+\end{tabular}
+\caption{Comparativa implementación propia vs.\ tercero}
+\end{table}
+
+Los dos \textit{mecanismos de protección} coexisten en el proyecto:
+
+\begin{description}[leftmargin=2cm,style=nextline]
+  \item[\texttt{JWT Bearer}] Para usuarios registrados: registro, login, perfil y operaciones de
+        paper betting. Token firmado con \texttt{HS256} y expiración de 7~días
+        (\texttt{ACCESS\_TOKEN\_EXPIRE\_MINUTES = 10080}).
+  \item[\texttt{Static Bearer}] Para el endpoint administrativo \texttt{POST /api/v1/admin/sync-odds}:
+        comparación en tiempo constante de un token secreto de administrador
+        (\texttt{secrets.compare\_digest}) para evitar \textit{timing attacks}.
+\end{description}
+
+% ═══════════════════════════════════════════════════════════════
+\section{Flujo de Autenticación — Diagramas de Secuencia}
+\label{sec:flow}
+
+\subsection{Flujo de Registro / Login}
+
+El siguiente diagrama describe el flujo completo desde que el cliente llama
+\texttt{POST /api/v1/auth/register} o \texttt{POST /api/v1/auth/login} hasta que recibe el token.
+
+\begin{center}
+\begin{tikzpicture}[
+  actor/.style={rectangle, draw=betblue, fill=betblue!10, rounded corners=4pt,
+                minimum width=2.2cm, minimum height=0.7cm, font=\small\bfseries},
+  msg/.style={->, >=Stealth, thick},
+  ret/.style={<-, >=Stealth, thick, dashed},
+  note/.style={font=\scriptsize\color{betgray}},
+  xscale=1, yscale=1
+]
+
+% ─ Actores ─
+\node[actor] (client)  at (0,0)   {Cliente\\(Next.js)};
+\node[actor] (api)     at (5,0)   {FastAPI\\Backend};
+\node[actor] (db)      at (10,0)  {PostgreSQL};
+
+% ─ Líneas de vida ─
+\draw[betgray!50, dashed] (client.south) -- ++(0,-11);
+\draw[betgray!50, dashed] (api.south)   -- ++(0,-11);
+\draw[betgray!50, dashed] (db.south)    -- ++(0,-11);
+
+% ─ Mensajes REGISTER ─
+\draw[msg] (0,-1)  -- node[above,note]{POST /auth/register \{email, password, display\_name\}} (5,-1);
+\draw[msg] (5,-2)  -- node[above,note]{SELECT * FROM users WHERE email=?} (10,-2);
+\draw[ret] (5,-3)  -- node[above,note]{rows=0 (email libre)} (10,-3);
+\draw[msg] (5,-4)  -- node[above,note]{INSERT INTO users (hash\_password(pwd))} (10,-4);
+\draw[ret] (5,-5)  -- node[above,note]{user\{id, email, …\}} (10,-5);
+\draw[ret] (0,-6)  -- node[above,note]{201 \{access\_token, token\_type, user\}} (5,-6);
+
+% ─ Separador ─
+\draw[betgray!30, densely dotted] (-1.5,-7) -- (11.5,-7)
+  node[midway,above,note]{\textit{── LOGIN (email+password ya existentes) ──}};
+
+% ─ Mensajes LOGIN ─
+\draw[msg] (0,-8)  -- node[above,note]{POST /auth/login \{email, password\}} (5,-8);
+\draw[msg] (5,-9)  -- node[above,note]{SELECT * FROM users WHERE email=?} (10,-9);
+\draw[ret] (5,-10) -- node[above,note]{user\{id, password\_hash, is\_active\}} (10,-10);
+\draw[ret] (0,-11) -- node[above,note]{200 \{access\_token, token\_type, user\}} (5,-11);
+
+\end{tikzpicture}
+\end{center}
+
+\vspace{1em}
+\textbf{Nota de seguridad:} cuando el usuario no existe \emph{o} la contraseña no coincide \emph{o}
+\texttt{is\_active=false}, el backend devuelve siempre \texttt{401 Unauthorized} con el mismo mensaje
+genérico \textit{``Invalid email or password.''}, evitando la enumeración de cuentas
+(OWASP A07:2025 — \textit{Identification and Authentication Failures}).
+
+\subsection{Flujo de Solicitud Protegida}
+
+Ejemplo: \texttt{GET /api/v1/bets} (historial de paper bets del usuario autenticado).
+
+\begin{center}
+\begin{tikzpicture}[
+  actor/.style={rectangle, draw=betblue, fill=betblue!10, rounded corners=4pt,
+                minimum width=2.2cm, minimum height=0.7cm, font=\small\bfseries},
+  msg/.style={->, >=Stealth, thick},
+  ret/.style={<-, >=Stealth, thick, dashed},
+  note/.style={font=\scriptsize\color{betgray}},
+]
+
+\node[actor] (client) at (0,0)   {Cliente\\(Next.js)};
+\node[actor] (api)    at (5,0)   {FastAPI\\Backend};
+\node[actor] (db)     at (10,0)  {PostgreSQL};
+
+\draw[betgray!50,dashed] (client.south) -- ++(0,-9);
+\draw[betgray!50,dashed] (api.south)    -- ++(0,-9);
+\draw[betgray!50,dashed] (db.south)     -- ++(0,-9);
+
+\draw[msg] (0,-1) -- node[above,note]{GET /bets — Authorization: Bearer \textless{}JWT\textgreater{}} (5,-1);
+\draw[msg, color=betblue] (5,-2) -- node[right,note,xshift=0.2cm]{\textit{jwt.decode(token, secret, algorithms=["HS256"])}} (5,-3)
+  node[right,note,xshift=0.2cm,yshift=0.4cm]{};
+% Interno (auto-flecha)
+\path (5,-2) edge[loop right, looseness=5, ->, >=Stealth, color=betblue]
+      node[right,note]{\textit{decode\_access\_token()}} (5,-2);
+
+\draw[msg] (5,-3.5) -- node[above,note]{SELECT * FROM users WHERE id=sub AND is\_active=true} (10,-3.5);
+\draw[ret] (5,-4.5) -- node[above,note]{user\{id, email, bankroll, …\}} (10,-4.5);
+
+\draw[msg] (5,-5.5) -- node[above,note]{SELECT * FROM paper\_bets WHERE user\_id=\$id ORDER BY placed\_at DESC} (10,-5.5);
+\draw[ret] (5,-6.5) -- node[above,note]{[]\,lista de bets} (10,-6.5);
+
+\draw[ret] (0,-7.5) -- node[above,note]{200 OK — JSON array de PaperBetResponse} (5,-7.5);
+
+\draw[msg, color=betred] (0,-8.5) -- node[above,note]{\textit{(si token ausente/inválido/expirado)}} (5,-8.5);
+\draw[ret, color=betred] (0,-9) -- node[above,note]{401 Unauthorized + WWW-Authenticate: Bearer} (5,-9);
+
+\end{tikzpicture}
+\end{center}
+
+% ═══════════════════════════════════════════════════════════════
+\section{Token JWT — Estructura, Expiración, Renovación y Logout}
+\label{sec:token}
+
+\subsection{Estructura del token (Claims)}
+
+El token se genera en \texttt{backend/app/core/security.py} con la función
+\texttt{create\_access\_token()}:
+
+\begin{lstlisting}[language=Python, caption={Generación del JWT (security.py)}]
+payload = {
+    "sub": str(user_id),          # Subject: UUID del usuario
+    "type": "access",             # Tipo de token (guard against refresh reuse)
+    "iat": now,                   # Issued At (datetime UTC)
+    "exp": now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+}
+return jwt.encode(payload, signing_key, algorithm="HS256")
+\end{lstlisting}
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+\textbf{Claim} & \textbf{Tipo} & \textbf{Descripción} \\
+\midrule
+\claim{sub}{UUID (string)} {Identificador único del usuario en PostgreSQL}
+\claim{type}{string \texttt{"access"}}{Distingue tokens de acceso de posibles refresh tokens futuros}
+\claim{iat}{timestamp UNIX}{Momento de emisión (UTC)}
+\claim{exp}{timestamp UNIX}{Expiración — 10\,080 minutos (7 días) por defecto}
+\bottomrule
+\end{tabular}
+\caption{Claims del JWT de BetMetrics}
+\end{table}
+
+El algoritmo de firma es \textbf{HS256} (HMAC-SHA-256).  La clave de firma se lee de la variable de
+entorno \texttt{JWT\_SECRET\_KEY}; como fallback de desarrollo se acepta \texttt{API\_SECRET\_TOKEN}.
+Si ninguna está configurada, el backend devuelve \texttt{503 Service Unavailable}.
+
+\subsection{Expiración}
+
+La variable \texttt{ACCESS\_TOKEN\_EXPIRE\_MINUTES} se lee del entorno y tiene un valor por defecto de
+\textbf{10\,080 minutos (7 días)}.  La validación la realiza la librería \texttt{PyJWT} al decodificar:
+si el token ha expirado lanza \texttt{jwt.ExpiredSignatureError} (subclase de \texttt{jwt.PyJWTError}),
+que es capturada y convertida en \texttt{401 Unauthorized}.
+
+\subsection{Renovación}
+
+BetMetrics \textbf{no implementa refresh tokens} en la versión actual.  Cuando un token expira,
+el usuario debe autenticarse de nuevo mediante \texttt{POST /api/v1/auth/login}.
+
+\textit{Mejora propuesta:} Añadir un endpoint \texttt{POST /api/v1/auth/refresh} con un
+\textit{refresh token} de larga duración (p.ej.\ 30 días) almacenado en una cookie \texttt{HttpOnly},
+e invalidarlo en logout mediante una lista de revocación en Redis.
+
+\subsection{Estrategia de Logout}
+
+Dado que el backend es \textit{stateless} y no mantiene un registro de tokens emitidos, el logout
+se gestiona hoy \textbf{exclusivamente en el cliente}:
+
+\begin{enumerate}
+  \item El frontend elimina el token de \texttt{localStorage} / \texttt{BettingContext}.
+  \item El token persiste criptográficamente válido hasta su expiración natural (\texttt{exp}).
+\end{enumerate}
+
+Este es un riesgo conocido (ver Sección~\ref{sec:security}).  Una mitigación inmediata sería
+acortar el TTL a 15–30 minutos y añadir un \textit{blocklist} en Redis para tokens revocados
+explícitamente.
+
+% ═══════════════════════════════════════════════════════════════
+\section{Arquitectura del Sistema}
+\label{sec:architecture}
+
+\subsection{Diagrama de Componentes}
+
+\begin{center}
+\begin{tikzpicture}[
+  comp/.style={rectangle, draw=betblue, fill=betblue!8, rounded corners=6pt,
+               minimum width=3cm, minimum height=1.1cm, align=center, font=\small\bfseries},
+  ext/.style={rectangle, draw=betgray, fill=betgray!10, rounded corners=6pt,
+              minimum width=3cm, minimum height=1.1cm, align=center, font=\small},
+  db/.style={cylinder, draw=betgreen!70!black, fill=betgreen!10,
+             minimum width=2.4cm, minimum height=1cm, align=center, font=\small\bfseries,
+             shape border rotate=90},
+  cache/.style={cylinder, draw=betyellow!70!black, fill=betyellow!10,
+                minimum width=2.4cm, minimum height=1cm, align=center, font=\small\bfseries,
+                shape border rotate=90},
+  arr/.style={->, >=Stealth, thick},
+  label/.style={font=\scriptsize, fill=white, inner sep=2pt},
+]
+
+% ─ Nodos ─
+\node[comp]  (fe)      at (0,5)     {Frontend\\Next.js 14\\:3000};
+\node[comp]  (be)      at (5,5)     {Backend\\FastAPI\\:8000};
+\node[db]    (pg)      at (5,1.5)   {PostgreSQL\\:5432};
+\node[cache] (redis)   at (9,5)     {Redis\\:6379};
+\node[ext]   (rapid)   at (5,8.5)   {The Odds API\\(RapidAPI)};
+\node[ext]   (admin)   at (10,8.5)  {Operador\\Admin};
+
+% ─ Flechas ─
+\draw[arr] (fe) -- node[label,above]{JWT Bearer / JSON} (be);
+\draw[arr] (be) -- node[label,right]{SQL async\\(asyncpg)} (pg);
+\draw[arr] (be) -- node[label,above]{GET/SET\\betmetrics:odds:*} (redis);
+\draw[arr, dashed] (be) -- node[label,right]{HTTPS + X-RapidAPI-Key} (rapid);
+\draw[arr, color=betred] (admin) -- node[label,right]{Bearer \textless{}API\_SECRET\_TOKEN\textgreater{}} (be);
+
+\end{tikzpicture}
+\end{center}
+
+\subsection{Endpoints y datos entre cada par de componentes}
+
+\begin{longtable}{p{3cm} p{3.5cm} p{7cm}}
+\toprule
+\textbf{Par} & \textbf{Protocolo / Endpoint} & \textbf{Datos intercambiados} \\
+\midrule
+\endhead
+\textbf{Frontend $\to$ Backend} &
+  \texttt{POST /api/v1/auth/register} &
+  Envía \texttt{\{email, password, display\_name\}}; recibe \texttt{\{access\_token, user\}} \\[4pt]
+ &
+  \texttt{POST /api/v1/auth/login} &
+  Envía credenciales; recibe JWT + perfil \\[4pt]
+ &
+  \texttt{GET /api/v1/auth/me} &
+  Cabecera \texttt{Authorization: Bearer <JWT>}; recibe perfil del usuario \\[4pt]
+ &
+  \texttt{GET /api/v1/bets} &
+  JWT en cabecera; recibe lista de \texttt{PaperBetResponse} \\[4pt]
+ &
+  \texttt{POST /api/v1/bets} &
+  JWT + payload de apuesta; recibe \texttt{PaperBetResponse} calculado \\[4pt]
+ &
+  \texttt{GET /api/v1/odds/ev} &
+  Parámetro \texttt{sport}, \texttt{stake}; recibe cuotas +EV sin autenticación \\[4pt]
+\midrule
+\textbf{Backend $\to$ PostgreSQL} &
+  SQL async (asyncpg) &
+  \texttt{SELECT}, \texttt{INSERT} sobre tablas \texttt{users} y \texttt{paper\_bets}; pool de 5--15 conexiones \\[4pt]
+\midrule
+\textbf{Backend $\to$ Redis} &
+  Redis GET/SETEX &
+  Claves \texttt{betmetrics:odds:fresh:\{sport\}} (TTL 300\,s), \texttt{betmetrics:odds:stale:\{sport\}} (TTL 86400\,s) \\[4pt]
+\midrule
+\textbf{Backend $\to$ RapidAPI} &
+  HTTPS REST &
+  Cabeceras \texttt{X-RapidAPI-Key} y \texttt{X-RapidAPI-Host}; respuesta JSON de cuotas en vivo \\[4pt]
+\midrule
+\textbf{Admin $\to$ Backend} &
+  \texttt{POST /api/v1/admin/sync-odds} &
+  Cabecera \texttt{Authorization: Bearer <API\_SECRET\_TOKEN>}; payload \texttt{\{sport, force\_invalidate\}} \\[4pt]
+\bottomrule
+\caption{Tabla de endpoints y datos por par de componentes}
+\end{longtable}
+
+% ═══════════════════════════════════════════════════════════════
+\section{Manejo de Fallos}
+\label{sec:failure}
+
+\subsection{Fallo del servicio de base de datos (PostgreSQL)}
+
+\begin{itemize}
+  \item \textbf{Durante arranque:} \texttt{init\_db()} reintenta la conexión hasta 10 veces con
+        \texttt{asyncio.sleep(1)} entre intentos.  Si agota los reintentos lanza \texttt{RuntimeError}
+        y el backend no inicia (\texttt{depends\_on: db: condition: service\_healthy} en Compose).
+  \item \textbf{En tiempo de ejecución:} \texttt{create\_async\_engine(pool\_pre\_ping=True)} verifica
+        la conexión antes de cada uso.  Si la base de datos se cae después del arranque, las peticiones
+        que necesiten DB (\texttt{/auth/*}, \texttt{/bets/*}) reciben \texttt{500 Internal Server Error}
+        genérico sin exponer detalles internos.
+  \item \textbf{Endpoints sin DB:} \texttt{GET /health}, \texttt{GET /api/v1/odds/ev} (si Redis tiene
+        caché) y \texttt{GET /api/v1/calculations/ev} siguen funcionando con normalidad.
+\end{itemize}
+
+\subsection{Fallo de RapidAPI (proveedor externo de cuotas)}
+
+BetMetrics implementa un patrón de resiliencia de tres niveles en
+\texttt{rapidapi\_client.py}:
+
+\begin{enumerate}
+  \item \textbf{Respuesta en vivo (HTTP 200):} se guarda en Redis como caché fresca
+        (\texttt{betmetrics:odds:fresh:*}) y como respaldo \textit{stale}
+        (\texttt{betmetrics:odds:stale:*}).
+  \item \textbf{HTTP 429 Too Many Requests:} se sirve la caché \textit{stale} (hasta 24~h de
+        antigüedad) con \texttt{\{"cached": true, "source": "redis\_stale\_429"\}}.
+  \item \textbf{Cualquier otro error (5xx, timeout, red):} se sirve la caché \textit{stale} con
+        \texttt{\{"source": "redis\_stale\_error"\}}.  Si tampoco hay caché disponible se devuelve
+        \texttt{503 Service Unavailable}.
+\end{enumerate}
+
+El frontend distingue el origen mediante los campos \texttt{cached} y \texttt{source} y muestra
+un aviso al usuario indicando que las cuotas pueden no ser en tiempo real.
+
+\subsection{Fallo del servicio de caché (Redis)}
+
+Redis no almacena estado de autenticación (los JWT son \textit{stateless}), por lo que:
+
+\begin{itemize}
+  \item \textbf{Login / Registro / Perfil:} no se ven afectados; solo dependen de PostgreSQL.
+  \item \textbf{Cuotas +EV (\texttt{/odds/ev}):} sin Redis se realiza una petición en vivo a
+        RapidAPI en cada llamada (sin caché), lo cual puede generar HTTP 429 si se excede la cuota.
+  \item \textbf{Sync admin:} \texttt{POST /admin/sync-odds} intentará invalidar la caché Redis
+        — si falla devuelve \texttt{cache\_invalidated: false} pero continúa con la sincronización.
+\end{itemize}
+
+% ═══════════════════════════════════════════════════════════════
+\section{Seguridad}
+\label{sec:security}
+
+\subsection{Medidas implementadas y riesgos residuales (OWASP Top 10:2025)}
+
+\begin{longtable}{p{3.8cm} p{5.5cm} p{5cm}}
+\toprule
+\textbf{OWASP 2025} & \textbf{Medida aplicada en BetMetrics} & \textbf{Riesgo residual} \\
+\midrule
+\endhead
+\textbf{A01 — Broken Access Control} &
+  Cada endpoint de \texttt{/bets} filtra por \texttt{user\_id = current\_user.id}; el admin
+  usa \texttt{secrets.compare\_digest()} (tiempo constante). &
+  Sin RBAC formal; un futuro rol moderador requeriría más lógica. \\[6pt]
+
+\textbf{A02 — Cryptographic Failures} &
+  Contraseñas hasheadas con \texttt{pwdlib} (Argon2 / bcrypt recomendado por la librería).
+  JWT firmado con HS256 y clave de al menos 32 bytes exigida por configuración. &
+  HS256 es simétrico: quien tenga \texttt{JWT\_SECRET\_KEY} puede forjar tokens.
+  Migrar a RS256 en producción multi-servicio. \\[6pt]
+
+\textbf{A03 — Injection} &
+  SQLAlchemy ORM con consultas parametrizadas; nunca SQL crudo.
+  Validación estricta de Pydantic con \texttt{extra="forbid"}. &
+  Bajo si se mantiene el ORM. Riesgo mínimo. \\[6pt]
+
+\textbf{A04 — Insecure Design} &
+  Separación de responsabilidades: seguridad en \texttt{core/security.py},
+  excepciones en \texttt{core/exceptions.py}. &
+  Ausencia de rate limiting en \texttt{/auth/login} (posible fuerza bruta). \\[6pt]
+
+\textbf{A05 — Security Misconfiguration} &
+  CORS restringido a \texttt{localhost:3000}.
+  Cabeceras \texttt{X-Content-Type-Options: nosniff}, \texttt{X-Frame-Options: DENY},
+  \texttt{Cache-Control: no-store} en todo response.
+  Redis con contraseña requerida (\texttt{requirepass}). &
+  En producción debe añadirse HTTPS (TLS) y HSTS. \\[6pt]
+
+\textbf{A06 — Vulnerable \& Outdated Components} &
+  Dependencias declaradas en \texttt{requirements.txt} con versiones explícitas. &
+  Sin pipeline de auditoría automática (p.ej.\ \texttt{pip audit} en CI). \\[6pt]
+
+\textbf{A07 — Auth Failures} &
+  Mensaje de error genérico en login (no revela si el email existe).
+  Token Bearer requerido via \texttt{HTTPBearer(auto\_error=False)} con respuesta
+  \texttt{WWW-Authenticate: Bearer} en 401. &
+  Sin límite de intentos de login; sin MFA; logout solo en cliente. \\[6pt]
+
+\textbf{A08 — Software \& Data Integrity} &
+  El backend valida todos los campos de entrada.
+  \texttt{sync-odds} admin revalida el token en cada petición. &
+  Sin firma de respuestas API; el frontend confía ciegamente en el JSON. \\[6pt]
+
+\textbf{A09 — Security Logging \& Monitoring} &
+  Logging estructurado con \texttt{logging} de Python; los errores 401 y 500 se registran. &
+  Sin sistema centralizado de logs (ELK, Cloud Logging) ni alertas automáticas. \\[6pt]
+
+\textbf{A10 — SSRF} &
+  El backend solo realiza peticiones HTTP salientes a \texttt{odds.p.rapidapi.com}
+  (host hardcodeado en configuración). &
+  El host puede sobrescribirse con la variable \texttt{RAPIDAPI\_HOST}; en producción
+  debería ser inmutable. \\[6pt]
+\bottomrule
+\caption{Mapeo OWASP Top 10:2025 — BetMetrics}
+\end{longtable}
+
+% ═══════════════════════════════════════════════════════════════
+\section{Evidencia del Flujo}
+\label{sec:evidence}
+
+Las pruebas se ejecutan con el archivo \texttt{tests.http} (VS Code REST Client) contra el backend
+corriendo en \texttt{http://localhost:8000}.  A continuación se muestran las pruebas clave.
+
+\subsection{Registro y obtención de token (201 Created)}
+
+\begin{lstlisting}[language=,caption={tests.http — Registro de usuario}]
+POST http://localhost:8000/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "demo@betmetrics.local",
+  "password": "demo-password-123",
+  "display_name": "Demo Bettor"
+}
+
+# Respuesta esperada: 201 Created
+# {
+#   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+#   "token_type": "bearer",
+#   "user": {
+#     "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+#     "email": "demo@betmetrics.local",
+#     "display_name": "Demo Bettor",
+#     "starting_bankroll": 10000.0,
+#     "odds_format": "DECIMAL",
+#     "created_at": "2026-11-05T19:20:00Z"
+#   }
+# }
+\end{lstlisting}
+
+\subsection{Login con credenciales válidas (200 OK)}
+
+\begin{lstlisting}[language=,caption={tests.http — Login}]
+POST http://localhost:8000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "demo@betmetrics.local",
+  "password": "demo-password-123"
+}
+# Respuesta: 200 OK con access_token JWT
+\end{lstlisting}
+
+\subsection{Ruta protegida sin token (401 Unauthorized)}
+
+\begin{lstlisting}[language=,caption={tests.http — GET /bets sin token}]
+GET http://localhost:8000/api/v1/bets
+# (sin cabecera Authorization)
+
+# Respuesta: 401 Unauthorized
+# {
+#   "error": "Unauthorized",
+#   "message": "Could not validate credentials."
+# }
+\end{lstlisting}
+
+\subsection{Admin sin token / con token inválido (401)}
+
+\begin{lstlisting}[language=,caption={tests.http — Admin sync-odds sin token}]
+POST http://localhost:8000/api/v1/admin/sync-odds
+Content-Type: application/json
+# (sin Authorization)
+
+# 401 Unauthorized
+# { "error": "Unauthorized",
+#   "message": "Missing or invalid Authorization Bearer header." }
+
+###
+POST http://localhost:8000/api/v1/admin/sync-odds
+Authorization: Bearer token-invalido-12345
+Content-Type: application/json
+
+# 401 Unauthorized
+# { "error": "Unauthorized",
+#   "message": "Invalid administrative access token." }
+\end{lstlisting}
+
+\subsection{Admin con token válido (200 OK)}
+
+\begin{lstlisting}[language=,caption={tests.http — Admin sync-odds con token correcto}]
+POST http://localhost:8000/api/v1/admin/sync-odds
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "sport": "soccer_mexico_ligamx",
+  "force_invalidate": true
+}
+
+# 200 OK
+# {
+#   "status": "synchronized",
+#   "sport": "soccer_mexico_ligamx",
+#   "cache_invalidated": true,
+#   "synced_matches": 8,
+#   "source": "rapidapi_live",
+#   "timestamp": "2026-11-05T19:30:00Z"
+# }
+\end{lstlisting}
+
+\subsection{Credenciales inválidas (401)}
+
+\begin{lstlisting}[language=,caption={tests.http — Login con contraseña incorrecta}]
+POST http://localhost:8000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "demo@betmetrics.local",
+  "password": "wrong-password"
+}
+
+# 401 Unauthorized
+# {
+#   "error": "Unauthorized",
+#   "message": "Invalid email or password."
+# }
+\end{lstlisting}
+
+% ═══════════════════════════════════════════════════════════════
+\section*{Conclusiones}
+
+BetMetrics implementa un sistema de autenticación propio basado en JWT HS256 que cubre los
+requerimientos del proyecto académico.  Los puntos fuertes son:
+
+\begin{itemize}
+  \item Control total sobre el modelo de datos y la infraestructura.
+  \item Separación limpia entre la lógica de autenticación de usuarios (JWT) y la de administración (Static Bearer).
+  \item Manejo de errores robusto que nunca expone detalles internos al cliente.
+  \item Cabeceras de endurecimiento HTTP aplicadas globalmente.
+\end{itemize}
+
+Las mejoras prioritarias para un entorno productivo serían:
+rate limiting en \texttt{/auth/login}, refresh tokens con \textit{blocklist} en Redis,
+transición a RS256 (firma asimétrica) y HTTPS obligatorio.
+
+\end{document}
+
