@@ -89,6 +89,8 @@ betMetrics/
 
 ## Quick Start / Cómo Ejecutar (Docker + Frontend Local)
 
+- **Token administrativo de prueba:** `betmetrics-super-secret-admin-token-2026` (para probar el endpoint protegido en Swagger UI dando clic en el botón *Authorize*).
+
 ### Paso 1: Configurar Variables de Entorno en Raíz y Levantar PostgreSQL + Redis + Backend
 
 Desde la raíz del proyecto (`betMetrics/`):
