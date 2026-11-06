@@ -1,7 +1,7 @@
 \documentclass[11pt,a4paper]{article}
 
 \usepackage[utf8]{inputenc}
-\usepackage[spanish]{babel}
+\usepackage[english]{babel}
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{hyperref}
 \usepackage{booktabs}
@@ -13,8 +13,8 @@
     colorlinks=true,
     linkcolor=blue,
     urlcolor=blue,
-    pdftitle={Reporte de Autenticacion - BetMetrics},
-    pdfauthor={Angel Dittrich}
+    pdftitle={Technical Report: Microservice Authentication System - BetMetrics},
+    pdfauthor={Joel Uriel Rocha Rivero}
 }
 
 \lstset{
@@ -32,7 +32,7 @@
 \begin{document}
 
 % -------------------------------------------------------------
-% PORTADA
+% TITLE PAGE
 % -------------------------------------------------------------
 \begin{titlepage}
     \centering
@@ -41,87 +41,87 @@
     {\Large \textbf{UTCH BIS --- Business Intelligence Systems}}\\[2cm]
     
     {\Huge \textbf{BetMetrics}}\\[0.5cm]
-    {\Large Reporte T\'ecnico: Sistema de Autenticaci\'on de Microservicio}\\[2cm]
+    {\Large Technical Report: Microservice Authentication System}\\[2cm]
     
     \begin{tabular}{ll}
-        \textbf{Estudiante:} & Angel Dittrich \\[0.3cm]
-        \textbf{Tutor:}      & Ramses Requena \\[0.3cm]
-        \textbf{Materia:}    & Arquitectura de Software / Microservicios \\[0.3cm]
-        \textbf{Actividad:}  & Actividad 4 --- Sistema de Autenticaci\'on \\[0.3cm]
-        \textbf{Fecha:}      & Noviembre 2026
+        \textbf{Student:}    & Joel Uriel Rocha Rivero \\[0.3cm]
+        \textbf{Advisor:}    & Ramses Requena \\[0.3cm]
+        \textbf{Course:}     & Software Architecture / Microservices \\[0.3cm]
+        \textbf{Assignment:} & Activity 4 --- Authentication System \\[0.3cm]
+        \textbf{Date:}       & November 2026
     \end{tabular}
     
     \vfill
-    {\small Repositorio del proyecto: \url{https://github.com/tu-org/betMetrics}}
+    {\small Project repository: \url{https://github.com/your-org/betMetrics}}
 \end{titlepage}
 
 \tableofcontents
 \newpage
 
 % -------------------------------------------------------------
-% SECCION 1: MECANISMO
+% SECTION 1: MECHANISM
 % -------------------------------------------------------------
-\section{Mecanismo de Autenticaci\'on}
+\section{Authentication Mechanism}
 
-\subsection{\textquestiondown Qu\'e se utiliz\'o y por qu\'e?}
-En el proyecto \textbf{BetMetrics} se implement\'o un mecanismo de autenticaci\'on propio basado en tokens \textbf{JWT (JSON Web Tokens)} utilizando firma sim\'etrica con el algoritmo \textbf{HS256} (HMAC con SHA-256), complementado con un esquema de token est\'atico seguro para endpoints administrativos.
+\subsection{What Was Used and Why?}
+The \textbf{BetMetrics} project implements an in-house authentication mechanism based on \textbf{JWT (JSON Web Tokens)} signed symmetrically with the \textbf{HS256} (HMAC with SHA-256) algorithm, complemented by a secure static token scheme for administrative endpoints.
 
-Las razones principales de esta elecci\'on son:
+The primary reasons behind this design choice are:
 \begin{itemize}
-    \item \textbf{Arquitectura desacoplada y sin estado (Stateless):} El microservicio de backend (FastAPI) procesa c\'alculos anal\'iticos de apuestas de valor (+EV) y cuotas en tiempo real. Un esquema de tokens sin estado permite escalar horizontalmente sin replicar tablas de sesiones en memoria de servidores web.
-    \item \textbf{Independencia y control total de datos:} Campos esenciales del modelo de negocio (como el saldo virtual \texttt{starting\_bankroll} y la preferencia \texttt{odds\_format}) residen directamente en la base de datos relacional (PostgreSQL) y son gestionados en conjunto con el ciclo de vida del usuario.
-    \item \textbf{Doble nivel de protecci\'on:}
+    \item \textbf{Decoupled and Stateless Architecture:} The backend microservice (FastAPI) processes analytical positive expected value (+EV) betting calculations and live odds in real time. A stateless token scheme enables horizontal scaling without replicating in-memory session tables across web servers.
+    \item \textbf{Data Independence and Full Ownership:} Core business-domain fields (such as the virtual bankroll \texttt{starting\_bankroll} and the \texttt{odds\_format} display preference) reside directly in the relational database (PostgreSQL) and are managed alongside the user lifecycle.
+    \item \textbf{Dual-Layer Protection:}
     \begin{itemize}
-        \item \textbf{Usuarios:} Tokens JWT din\'amicos para clientes web (Next.js).
-        \item \textbf{Administraci\'on / Cach\'e:} Token Bearer secreto verificado con comparaci\'on en tiempo constante (\texttt{secrets.compare\_digest}) para prevenir ataques de temporizaci\'on (\textit{timing attacks}) en el endpoint de sincronizaci\'on forzada de cuotas.
+        \item \textbf{Users:} Dynamic JWT tokens issued to web clients (Next.js).
+        \item \textbf{Administration / Cache:} Secret Bearer token verified via constant-time comparison (\texttt{secrets.compare\_digest}) to prevent timing attacks on the forced odds-synchronization endpoint.
     \end{itemize}
 \end{itemize}
 
-\subsection{Comparativa: Implementaci\'on propia vs. Terceros (Auth0, Firebase, Google)}
+\subsection{Comparison: In-House Implementation vs. Third-Party Providers (Auth0, Firebase, Google)}
 
 \begin{table}[h!]
 \centering
 \small
 \begin{tabular}{p{3.2cm} p{5.5cm} p{5.5cm}}
 \toprule
-\textbf{Aspecto} & \textbf{Implementaci\'on Propia (BetMetrics)} & \textbf{Terceros (Auth0, Firebase)} \\
+\textbf{Aspect} & \textbf{In-House Implementation (BetMetrics)} & \textbf{Third-Party Providers (Auth0, Firebase)} \\
 \midrule
 \textbf{Pros} & 
-- Sin costo por usuarios activos (MAU).\newline
-- No requiere conexi\'on externa a internet para validar identidades.\newline
-- Control total sobre el esquema y almacenamiento de datos. & 
-- Seguridad auditada por especialistas.\newline
-- Soporte nativo para MFA y Single Sign-On (Google, GitHub, Apple).\newline
-- Paneles listos para gesti\'on de usuarios. \\
+- No cost per Monthly Active User (MAU).\newline
+- Requires no external internet connection to validate identities.\newline
+- Full control over the data schema and storage. & 
+- Security audited by dedicated specialists.\newline
+- Native support for MFA and Single Sign-On (Google, GitHub, Apple).\newline
+- Ready-to-use dashboards for user management. \\
 \midrule
-\textbf{Contras} & 
-- Responsabilidad completa sobre el almacenamiento y hash de passwords.\newline
-- No cuenta con recuperaci\'on autom\'atica de contrase\~na o MFA nativo. & 
-- Dependencia externa (\textit{vendor lock-in}).\newline
-- Latencia adicional de red hacia el proveedor.\newline
-- Costos elevados al escalar usuarios. \\
+\textbf{Cons} & 
+- Full responsibility over password hashing and storage.\newline
+- No built-in automated password recovery or native MFA. & 
+- External dependency (\textit{vendor lock-in}).\newline
+- Additional network latency to the external provider.\newline
+- High costs when scaling user volume. \\
 \bottomrule
 \end{tabular}
-\caption{Pros y contras entre desarrollo propio y proveedores de terceros.}
+\caption{Pros and cons of in-house development versus third-party authentication providers.}
 \end{table}
 
 % -------------------------------------------------------------
-% SECCION 2: FLUJO DE AUTENTICACION
+% SECTION 2: AUTHENTICATION FLOWS
 % -------------------------------------------------------------
-\section{Flujos de Autenticaci\'on}
+\section{Authentication Flows}
 
-\subsection{Diagrama de Flujo: Inicio de Sesi\'on (Login)}
+\subsection{Flow Diagram: User Sign-In (Login)}
 
-A continuaci\'on se detalla la secuencia de interacciones cuando un usuario inicia sesi\'on:
+The following sequence details the interactions when a user signs in:
 
 \begin{lstlisting}
-[Cliente Next.js]         [FastAPI Backend]            [PostgreSQL]
+[Next.js Client]          [FastAPI Backend]            [PostgreSQL]
        |                          |                         |
        |--- 1. POST /auth/login ->|                         |
        |    {email, password}     |                         |
        |                          |--- 2. SELECT * WHERE -->|
        |                          |       email = :email    |
-       |                          |<-- 3. Retorna User -----|
+       |                          |<-- 3. Returns User -----|
        |                          |                         |
        |                          |-- 4. verify_password()  |
        |                          |   (Argon2 / bcrypt)     |
@@ -129,199 +129,199 @@ A continuaci\'on se detalla la secuencia de interacciones cuando un usuario inic
        |<-- 6. HTTP 200 OK -------|                         |
        |    {access_token, user}  |                         |
        |                          |                         |
-       | (Si falla contrasena):   |                         |
+       | (If password fails):     |                         |
        |<-- HTTP 401 Unauthorized-|                         |
 \end{lstlisting}
 
-\subsection{Diagrama de Flujo: Petici\'on Protegida (\texttt{GET /api/v1/bets})}
+\subsection{Flow Diagram: Protected Request (\texttt{GET /api/v1/bets})}
 
-Secuencia cuando un usuario autenticado consulta su historial de apuestas simuladas (\textit{paper betting}):
+Sequence executed when an authenticated user retrieves their simulated betting (\textit{paper betting}) history:
 
 \begin{lstlisting}
-[Cliente Next.js]         [FastAPI Backend]            [PostgreSQL]
+[Next.js Client]          [FastAPI Backend]            [PostgreSQL]
        |                          |                         |
        |--- 1. GET /bets -------->|                         |
-       |    Header Authorization: |                         |
+       |    Authorization Header: |                         |
        |    Bearer <access_token> |                         |
        |                          |-- 2. jwt.decode()       |
-       |                          |   - Valida firma HS256  |
-       |                          |   - Valida expiracion   |
-       |                          |   - Extrae sub (UUID)   |
+       |                          |   - Verify HS256 sig    |
+       |                          |   - Verify expiration   |
+       |                          |   - Extract sub (UUID)  |
        |                          |                         |
        |                          |--- 3. SELECT * FROM --->|
        |                          |       users WHERE id=:id|
-       |                          |<-- 4. User verificado --|
+       |                          |<-- 4. Verified User ----|
        |                          |                         |
        |                          |--- 5. SELECT * FROM --->|
        |                          |    paper_bets WHERE uid |
-       |                          |<-- 6. Lista de apuestas-|
+       |                          |<-- 6. List of bets -----|
        |<-- 7. HTTP 200 OK -------|                         |
        |    [ {bet1}, {bet2} ]    |                         |
        |                          |                         |
-       | (Si token es invalido):  |                         |
+       | (If token is invalid):   |                         |
        |<-- HTTP 401 Unauthorized-|                         |
 \end{lstlisting}
 
 % -------------------------------------------------------------
-% SECCION 3: TOKEN Y ESTRATEGIA DE SESION
+% SECTION 3: TOKEN AND SESSION STRATEGY
 % -------------------------------------------------------------
-\section{Estructura del Token, Expiraci\'on y Estrategia de Cierre}
+\section{Token Structure, Expiration, and Logout Strategy}
 
-\subsection{Claims del Token}
-El token generado por \texttt{create\_access\_token()} en \texttt{app/core/security.py} incluye los siguientes campos estandarizados:
+\subsection{Token Claims}
+The token generated by \texttt{create\_access\_token()} in \texttt{app/core/security.py} includes the following standardized claims:
 
 \begin{table}[h!]
 \centering
 \small
 \begin{tabular}{lll}
 \toprule
-\textbf{Claim} & \textbf{Tipo} & \textbf{Prop\'osito} \\
+\textbf{Claim} & \textbf{Type} & \textbf{Purpose} \\
 \midrule
-\texttt{sub}  & \texttt{string} (UUID) & Identificador \'unico del usuario en la base de datos. \\
-\texttt{type} & \texttt{string} (\texttt{"access"}) & Etiqueta de tipo de token para prevenir uso indebido. \\
-\texttt{iat}  & \texttt{int} (Timestamp UTC) & Momento exacto de creaci\'on e inicio de vigencia. \\
-\texttt{exp}  & \texttt{int} (Timestamp UTC) & Fecha y hora de expiraci\'on del token. \\
+\texttt{sub}  & \texttt{string} (UUID) & Unique user identifier in the database. \\
+\texttt{type} & \texttt{string} (\texttt{"access"}) & Token type tag to prevent token misuse. \\
+\texttt{iat}  & \texttt{int} (UTC Timestamp) & Exact issuance timestamp and start of validity. \\
+\texttt{exp}  & \texttt{int} (UTC Timestamp) & Token expiration date and time. \\
 \bottomrule
 \end{tabular}
-\caption{Estructura de Claims en el JWT de BetMetrics.}
+\caption{JWT claims structure in BetMetrics.}
 \end{table}
 
-\subsection{Expiraci\'on y Renovaci\'on}
+\subsection{Expiration and Renewal}
 \begin{itemize}
-    \item \textbf{Vigencia:} Configurable mediante la variable de entorno \texttt{ACCESS\_TOKEN\_EXPIRE\_MINUTES}. El valor predeterminado es de 7 d\'ias ($10{,}080$ minutos).
-    \item \textbf{Renovaci\'on:} El proyecto adopta un modelo estricto de acceso directo sin refresh tokens en su versi\'on base; al expirar el tiempo de vida del JWT, el cliente recibe un c\'odigo \texttt{401 Unauthorized} y debe redirigir al formulario de autenticaci\'on.
+    \item \textbf{Validity Period:} Configurable via the \texttt{ACCESS\_TOKEN\_EXPIRE\_MINUTES} environment variable. The default value is 7 days ($10{,}080$ minutes).
+    \item \textbf{Renewal:} The project adopts a strict direct-access model without refresh tokens in its baseline release; once the JWT lifetime expires, the client receives a \texttt{401 Unauthorized} status code and redirects the user to the sign-in form.
 \end{itemize}
 
-\subsection{Estrategia de Cierre de Sesi\'on (Logout)}
-Debido a la naturaleza \textit{stateless} de JWT, el logout opera en el cliente purgando el token almacenado en el contexto global y el almacenamiento local (\texttt{localStorage} bajo la clave \texttt{betmetrics\_auth\_token}). Para invalidaciones forzadas del lado servidor antes del vencimiento natural del token, el sistema prev\'e listas negras breves (\textit{blocklist}) registrables en Redis asociadas al UUID del sujeto.
+\subsection{Logout Strategy}
+Due to the \textit{stateless} nature of JWTs, logout operates on the client side by purging the token stored in the global application context and browser local storage (\texttt{localStorage} under the \texttt{betmetrics\_auth\_token} key). For forced server-side revocations prior to natural token expiration, the architecture provisions short-lived \textit{blocklists} in Redis keyed by the subject's UUID.
 
 % -------------------------------------------------------------
-% SECCION 4: ARQUITECTURA
+% SECTION 4: ARCHITECTURE
 % -------------------------------------------------------------
-\section{Arquitectura del Sistema}
+\section{System Architecture}
 
-\subsection{Diagrama de Componentes}
+\subsection{Component Diagram}
 
 \begin{lstlisting}
                +----------------------------------+
                |     Frontend (Next.js 14)        |
-               |     Puerto: 3000                 |
+               |     Port: 3000                   |
                +----------------------------------+
                                 |
                    HTTP / REST (JSON + JWT)
                                 v
                +----------------------------------+
-               |   Microservicio Backend          |
+               |   Backend Microservice           |
                |   (FastAPI / Python 3.12)        |
-               |   Puerto: 8000                   |
+               |   Port: 8000                     |
                +----------------------------------+
                   /             |               \
         asyncpg  /              | Redis API      \  HTTPS
                 /               v                 v
    +----------------+   +----------------+   +-----------------+
    |   PostgreSQL   |   |     Redis      |   |  The Odds API   |
-   |   (Usuarios y  |   |   (Cache de    |   |  (Proveedor     |
-   |   Paper Bets)  |   |   Cuotas EV)   |   |   Externo)      |
-   |   Puerto: 5432 |   |   Puerto: 6379 |   +-----------------+
+   |   (Users and   |   |   (EV Odds     |   |  (External      |
+   |   Paper Bets)  |   |   Cache)       |   |   Provider)     |
+   |   Port: 5432   |   |   Port: 6379   |   +-----------------+
    +----------------+   +----------------+
 \end{lstlisting}
 
-\subsection{Endpoints y Datos Intercambiados}
+\subsection{Endpoints and Exchanged Data}
 
 \begin{table}[h!]
 \centering
 \footnotesize
 \begin{tabular}{p{3.8cm} p{3.2cm} p{7.5cm}}
 \toprule
-\textbf{Componentes} & \textbf{Ruta / Protocolo} & \textbf{Datos e Informaci\'on} \\
+\textbf{Components} & \textbf{Route / Protocol} & \textbf{Exchanged Data and Purpose} \\
 \midrule
-Frontend $\rightarrow$ Backend & \texttt{POST /auth/register} & Env\'ia datos de cuenta; retorna JWT y objeto \texttt{UserResponse}. \\
-Frontend $\rightarrow$ Backend & \texttt{POST /auth/login} & Env\'ia email y password; retorna token de acceso. \\
-Frontend $\rightarrow$ Backend & \texttt{GET /auth/me} & Header \texttt{Bearer <token>}; devuelve perfil y configuraci\'on. \\
-Frontend $\rightarrow$ Backend & \texttt{GET /bets} & Header \texttt{Bearer <token>}; lista las apuestas simuladas del usuario. \\
-Frontend $\rightarrow$ Backend & \texttt{POST /bets} & Registra nueva apuesta; backend valida saldo disponible y c\'alculo +EV. \\
-Backend $\rightarrow$ PostgreSQL & Conexi\'on TCP 5432 & Consultas SQL as\'incronas (SQLAlchemy + asyncpg) sobre tablas de datos. \\
-Backend $\rightarrow$ Redis & Conexi\'on TCP 6379 & Comandos GET/SET de cuotas frescas (TTL 5m) y stale (TTL 24h). \\
-Backend $\rightarrow$ RapidAPI & HTTPS Externo & Clave API de cabecera; payload con eventos deportivos y momios. \\
-Admin $\rightarrow$ Backend & \texttt{POST /admin/sync-odds} & Token est\'atico secreto en header; fuerza invalidaci\'on de cach\'e. \\
+Frontend $\rightarrow$ Backend & \texttt{POST /auth/register} & Sends account registration payload; returns JWT and \texttt{UserResponse} object. \\
+Frontend $\rightarrow$ Backend & \texttt{POST /auth/login} & Sends email and password; returns access token. \\
+Frontend $\rightarrow$ Backend & \texttt{GET /auth/me} & \texttt{Bearer <token>} header; returns user profile and preferences. \\
+Frontend $\rightarrow$ Backend & \texttt{GET /bets} & \texttt{Bearer <token>} header; lists the user's simulated bets. \\
+Frontend $\rightarrow$ Backend & \texttt{POST /bets} & Records a new bet; backend validates available bankroll and recomputes +EV. \\
+Backend $\rightarrow$ PostgreSQL & TCP Port 5432 & Asynchronous SQL queries (SQLAlchemy + asyncpg) over domain tables. \\
+Backend $\rightarrow$ Redis & TCP Port 6379 & GET/SET commands for fresh odds (5m TTL) and stale fallback snapshots (24h TTL). \\
+Backend $\rightarrow$ RapidAPI & External HTTPS & Header API key; response payload containing sporting events and bookmaker odds. \\
+Admin $\rightarrow$ Backend & \texttt{POST /admin/sync-odds} & Secret static token in header; forces cache invalidation and synchronization. \\
 \bottomrule
 \end{tabular}
-\caption{Matriz de comunicaci\'on entre componentes.}
+\caption{Inter-component communication matrix.}
 \end{table}
 
 % -------------------------------------------------------------
-% SECCION 5: MANEJO DE FALLOS
+% SECTION 5: FAILURE HANDLING
 % -------------------------------------------------------------
-\section{Manejo de Fallos y Resiliencia}
+\section{Failure Handling and Resilience}
 
 \begin{enumerate}
-    \item \textbf{Ca\'ida de la Base de Datos (PostgreSQL):}
+    \item \textbf{Database Outage (PostgreSQL):}
     \begin{itemize}
-        \item \textit{En inicio:} El backend ejecuta \texttt{init\_db()} implementando 10 reintentos con retraso progresivo. En Docker Compose, la regla \texttt{depends\_on: db: condition: service\_healthy} garantiza que la aplicaci\'on no arranque hasta que la base de datos est\'e lista.
-        \item \textit{En ejecuci\'on:} Se activa un manejador de excepciones global que captura el fallo y responde con c\'odigo \texttt{500 Internal Server Error} sanitizado, ocultando detalles internos o trazas de SQL. Las rutas que no requieren base de datos (por ejemplo, el c\'alculo matem\'atico manual o el healthcheck) contin\'uan operando.
+        \item \textit{At startup:} The backend executes \texttt{init\_db()} implementing 10 retries with progressive backoff. In Docker Compose, the \texttt{depends\_on: db: condition: service\_healthy} rule guarantees that the application does not start until the database is ready to accept connections.
+        \item \textit{At runtime:} A global exception handler intercepts unhandled failures and responds with a sanitized \texttt{500 Internal Server Error} status code, concealing internal details and SQL stack traces. Database-independent routes (such as manual mathematical EV calculations or the healthcheck endpoint) remain operational.
     \end{itemize}
     
-    \item \textbf{Ca\'ida o L\'imite de la API de Cuotas (RapidAPI / The Odds API):}
+    \item \textbf{Odds API Outage or Rate Limiting (RapidAPI / The Odds API):}
     \begin{itemize}
-        \item Si el proveedor responde con \texttt{429 Too Many Requests} o errores de red 5xx, el microservicio recurre a la cach\'e de respaldo \textit{stale} en Redis (vigencia de 24 horas), devolviendo los datos con la propiedad \texttt{"source": "redis\_stale\_429"}.
-        \item Si la cach\'e tambi\'en est\'a vac\'ia, devuelve controladamente un c\'odigo \texttt{503 Service Unavailable}.
+        \item If the upstream provider responds with \texttt{429 Too Many Requests} or 5xx network errors, the microservice falls back to the 24-hour \textit{stale} backup cache in Redis, returning the snapshot tagged with \texttt{"source": "redis\_stale\_429"}.
+        \item If the backup cache is also empty, the service gracefully returns a controlled \texttt{503 Service Unavailable} status code.
     \end{itemize}
 
-    \item \textbf{Ca\'ida del Servicio de Cach\'e (Redis):}
+    \item \textbf{Cache Service Outage (Redis):}
     \begin{itemize}
-        \item No compromete la autenticaci\'on de usuarios, ya que los JWT se validan de forma aut\'onoma con su firma criptogr\'afica.
-        \item En las cuotas, ante la ausencia de cach\'e se realiza la llamada directa hacia la API externa.
+        \item User authentication remains unaffected, as JWTs are validated autonomously via their cryptographic signature.
+        \item For odds queries, when the cache is unreachable, requests fall back to direct calls to the external API.
     \end{itemize}
 \end{enumerate}
 
 % -------------------------------------------------------------
-% SECCION 6: SEGURIDAD (OWASP TOP 10:2025)
+% SECTION 6: SECURITY (OWASP TOP 10:2025)
 % -------------------------------------------------------------
-\section{Seguridad y Mapeo OWASP Top 10:2025}
+\section{Security and OWASP Top 10:2025 Mapping}
 
 \begin{table}[h!]
 \centering
 \footnotesize
 \begin{tabular}{p{3.2cm} p{6.2cm} p{5.2cm}}
 \toprule
-\textbf{Categor\'ia OWASP} & \textbf{Medida Aplicada en BetMetrics} & \textbf{Riesgo Residual / Mitigaci\'on} \\
+\textbf{OWASP Category} & \textbf{Mitigation Applied in BetMetrics} & \textbf{Residual Risk / Mitigation} \\
 \midrule
 \textbf{A01: Broken Access Control} & 
-Validaci\'on de propiedad de recursos (\texttt{user\_id == current\_user.id}) en cada consulta de apuestas. Autenticaci\'on de administraci\'on separada con tiempo constante. & 
-No hay roles complejos jer\'arquicos (RBAC) m\'ultiples implementados actualmente. \\
+Resource ownership enforcement (\texttt{user\_id == current\_user.id}) on every bet query. Separate constant-time administrative authentication. & 
+Complex multi-tier Role-Based Access Control (RBAC) hierarchies are not currently implemented. \\
 \midrule
 \textbf{A02: Cryptographic Failures} & 
-Hash seguro de contrase\~nas mediante librer\'ia est\'andar (\texttt{pwdlib} con Argon2/bcrypt). Firmas JWT con clave robusta le\'ida desde variables de entorno. & 
-Firma sim\'etrica HS256 compartida internamente en lugar de claves asim\'etricas (RS256). \\
+Secure password hashing via industry-standard library (\texttt{pwdlib} with Argon2/bcrypt). JWT signatures backed by a strong secret loaded from environment variables. & 
+Internally shared symmetric HS256 signing key rather than asymmetric key pairs (RS256). \\
 \midrule
 \textbf{A03: Injection} & 
-Uso exclusivo de ORM SQLAlchemy con par\'ametros preparados. Prohibici\'on de consultas SQL directas por concatenaci\'on. & 
-Riesgo m\'inimo. Validaci\'on estricta de esquemas Pydantic con \texttt{extra="forbid"}. \\
+Exclusive use of SQLAlchemy ORM with parameterized queries. Raw string-concatenated SQL queries are strictly prohibited. & 
+Minimal risk. Strict Pydantic request schema validation configured with \texttt{extra="forbid"}. \\
 \midrule
 \textbf{A05: Security Misconfiguration} & 
-Cabeceras HTTP de protecci\'on globales (\texttt{X-Content-Type-Options: nosniff}, \texttt{X-Frame-Options: DENY}, \texttt{Cache-Control: no-store}). CORS acotado. & 
-En entorno local no se utiliza HTTPS obligatorio; indispensable activarlo en despliegue. \\
+Global HTTP security headers (\texttt{X-Content-Type-Options: nosniff}, \texttt{X-Frame-Options: DENY}, \texttt{Cache-Control: no-store}). Restricted CORS origins. & 
+Local development does not enforce mandatory HTTPS; TLS termination must be enabled in production deployments. \\
 \midrule
 \textbf{A07: Identification \& Auth Failures} & 
-Mensajes de error neutros y unificados (ej. \textit{"Invalid email or password"}), evitando la enumeraci\'on de cuentas de usuario. & 
-Falta integrar un limitador de tasa de peticiones (\textit{Rate Limiting}) ante ataques de fuerza bruta. \\
+Neutral, unified error messages (e.g., \textit{"Invalid email or password"}), preventing user account enumeration. & 
+Request rate limiting against brute-force login attempts has not yet been integrated. \\
 \midrule
 \textbf{A10: Server-Side Request Forgery} & 
-Las peticiones HTTP salientes se dirigen \'unicamente a destinos prefijados en la configuraci\'on del servidor (\texttt{odds.p.rapidapi.com}). & 
-El dominio destino es controlado por par\'ametros de entorno inmutables en producci\'on. \\
+Outbound HTTP requests are restricted exclusively to server-configured upstream hosts (\texttt{odds.p.rapidapi.com}). & 
+Target upstream domains are governed by immutable environment parameters in production. \\
 \bottomrule
 \end{tabular}
-\caption{Mapeo de controles y riesgos con respecto a OWASP Top 10:2025.}
+\caption{Control and risk mapping against OWASP Top 10:2025.}
 \end{table}
 
 % -------------------------------------------------------------
-% SECCION 7: EVIDENCIA DE PRUEBAS
+% SECTION 7: TEST EVIDENCE
 % -------------------------------------------------------------
-\section{Evidencias de Funcionamiento}
+\section{Functional Test Evidence}
 
-Las siguientes salidas corresponden a las pruebas automatizadas y verificaciones manuales registradas en el archivo \texttt{tests.http}:
+The following outputs correspond to the automated requests and manual verifications recorded in the \texttt{tests.http} file:
 
-\subsection{1. Registro Exitoso (\texttt{201 Created})}
+\subsection{1. Successful Registration (\texttt{201 Created})}
 \begin{lstlisting}
 POST /api/v1/auth/register
 Content-Type: application/json
@@ -347,7 +347,7 @@ HTTP/1.1 201 Created
 }
 \end{lstlisting}
 
-\subsection{2. Inicio de Sesi\'on (\texttt{200 OK})}
+\subsection{2. User Sign-In (\texttt{200 OK})}
 \begin{lstlisting}
 POST /api/v1/auth/login
 Content-Type: application/json
@@ -365,10 +365,10 @@ HTTP/1.1 200 OK
 }
 \end{lstlisting}
 
-\subsection{3. Bloqueo de Acceso No Autorizado (\texttt{401 Unauthorized})}
+\subsection{3. Unauthorized Access Blocked (\texttt{401 Unauthorized})}
 \begin{lstlisting}
 GET /api/v1/bets
-(Sin cabecera Authorization)
+(No Authorization header)
 
 HTTP/1.1 401 Unauthorized
 WWW-Authenticate: Bearer
@@ -378,10 +378,10 @@ WWW-Authenticate: Bearer
 }
 \end{lstlisting}
 
-\subsection{4. Endpoint Administrativo con Token Inv\'alido (\texttt{401 Unauthorized})}
+\subsection{4. Administrative Endpoint with Invalid Token (\texttt{401 Unauthorized})}
 \begin{lstlisting}
 POST /api/v1/admin/sync-odds
-Authorization: Bearer token-invalido-12345
+Authorization: Bearer invalid-token-12345
 
 HTTP/1.1 401 Unauthorized
 {
@@ -390,7 +390,7 @@ HTTP/1.1 401 Unauthorized
 }
 \end{lstlisting}
 
-\section*{Conclusiones}
-El sistema de autenticaci\'on de BetMetrics cumple con los principios de bajo acoplamiento y alta resiliencia requeridos para una arquitectura orientada a microservicios. Mediante la combinaci\'on de JWT sin estado para clientes y autenticaci\'on de clave secreta con protecci\'on contra ataques de tiempo para administradores, se logra una soluci\'on segura, eficiente y f\'acilmente reproducible en contenedores Docker.
+\section*{Conclusions}
+The BetMetrics authentication system fulfills the loose-coupling and high-resilience principles required by a microservice-oriented architecture. By combining stateless JWTs for end-user clients with constant-time secret-token verification to guard administrative operations against timing attacks, the platform achieves a secure, efficient, and easily reproducible solution across Docker containers.
 
 \end{document}
