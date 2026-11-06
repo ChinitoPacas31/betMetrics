@@ -21,11 +21,11 @@ export default function MatchRow({ match }: MatchRowProps) {
   const [expanded, setExpanded] = useState(false);
 
   const kickoff = new Date(match.commence_time);
-  const dateLabel = kickoff.toLocaleDateString("es-MX", {
+  const dateLabel = kickoff.toLocaleDateString("en-US", {
     day: "2-digit",
     month: "short",
   });
-  const timeLabel = kickoff.toLocaleTimeString("es-MX", {
+  const timeLabel = kickoff.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -108,7 +108,7 @@ export default function MatchRow({ match }: MatchRowProps) {
               </span>
               <span className="shrink-0 text-[10px] text-slate-500">
                 {match.bookmakers_count || 1}{" "}
-                {(match.bookmakers_count || 1) === 1 ? "casa" : "casas"}
+                {(match.bookmakers_count || 1) === 1 ? "bookie" : "bookies"}
               </span>
             </div>
           </div>
@@ -202,7 +202,7 @@ export default function MatchRow({ match }: MatchRowProps) {
           <button
             type="button"
             onClick={() => setExpanded((prev) => !prev)}
-            title="Ver desglose matemático +EV"
+            title="View +EV mathematical breakdown"
             className={`flex h-[46px] w-8 shrink-0 items-center justify-center rounded border transition ${
               expanded
                 ? "border-blue-500/50 bg-sb-blue/15 text-blue-400"
@@ -223,7 +223,7 @@ export default function MatchRow({ match }: MatchRowProps) {
         <div className="border-t border-sb-border bg-sb-canvas/90 px-3 py-3">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[11px]">
             <span className="font-bold uppercase tracking-wider text-slate-400">
-              Análisis Sin Margen (De-Vigged Consensus) • Stake Base{" "}
+              No-Vig Analysis (De-Vigged Consensus) • Base Stake{" "}
               {formatMoney(match.stake)}
             </span>
             <TrafficLightBadge
@@ -237,14 +237,14 @@ export default function MatchRow({ match }: MatchRowProps) {
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-sb-border text-[10px] uppercase tracking-wider text-slate-500">
-                  <th className="pb-1.5 font-semibold">Selección</th>
-                  <th className="pb-1.5 font-semibold">Mejor Casa</th>
-                  <th className="pb-1.5 text-right font-semibold">Momio</th>
+                  <th className="pb-1.5 font-semibold">Selection</th>
+                  <th className="pb-1.5 font-semibold">Best Bookie</th>
+                  <th className="pb-1.5 text-right font-semibold">Odds</th>
                   <th className="pb-1.5 text-right font-semibold">
-                    Prob. Implícita
+                    Implied Prob.
                   </th>
                   <th className="pb-1.5 text-right font-semibold">
-                    Prob. Real (Fair)
+                    Fair Prob.
                   </th>
                   <th className="pb-1.5 text-right font-semibold">EV ($)</th>
                   <th className="pb-1.5 text-right font-semibold">Edge %</th>
@@ -300,7 +300,7 @@ export default function MatchRow({ match }: MatchRowProps) {
             </table>
           </div>
           <p className="mt-2 text-[11px] text-slate-400">
-            <span className="font-semibold text-slate-300">Mejor línea:</span>{" "}
+            <span className="font-semibold text-slate-300">Best line:</span>{" "}
             {match.selection} ({match.bookmaker}) — {match.recommendation}
           </p>
         </div>

@@ -25,10 +25,10 @@ class EVCalculatorService:
     @staticmethod
     def build_recommendation(traffic_light: TrafficLightColor, ev_percentage: float) -> str:
         if traffic_light == TrafficLightColor.GREEN:
-            return f"Oportunidad +EV Sólida (+{ev_percentage:.2f}%). Valor estadístico favorable para Paper Betting."
+            return f"Strong +EV Opportunity (+{ev_percentage:.2f}%). Favorable statistical edge for Paper Betting."
         if traffic_light == TrafficLightColor.YELLOW:
-            return f"Zona Neutral ({ev_percentage:.2f}%). Margen reducido frente al vigorish de la casa."
-        return f"Alto Riesgo / EV Negativo ({ev_percentage:.2f}%). Desfavorable a largo plazo."
+            return f"Neutral Zone ({ev_percentage:.2f}%). Narrow margin against the bookmaker vigorish."
+        return f"High Risk / Negative EV ({ev_percentage:.2f}%). Unfavorable in the long run."
 
     @classmethod
     def calculate_ev(cls, payload: EVCalculationRequest) -> EVCalculationResponse:

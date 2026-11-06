@@ -153,7 +153,7 @@ export function BettingProvider({ children }: { children: React.ReactNode }) {
       setSportsError(
         err instanceof Error
           ? err.message
-          : "No se pudo consultar el catálogo de deportes activos en FastAPI."
+          : "Could not fetch the active sports catalog from FastAPI."
       );
     } finally {
       setSportsLoading(false);

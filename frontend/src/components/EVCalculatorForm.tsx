@@ -95,7 +95,7 @@ export default function EVCalculatorForm() {
         }
       } else {
         setErrorMessage(
-          "No se pudo conectar con el microservicio FastAPI en http://localhost:8000."
+          "Could not connect to the FastAPI microservice at http://localhost:8000."
         );
       }
     } finally {
@@ -108,7 +108,7 @@ export default function EVCalculatorForm() {
     placePaperBet({
       matchId: `custom-${Date.now()}`,
       matchName: result.match_name,
-      league: "Calculadora Manual",
+      league: "Manual Calculator",
       selection: selectionLabel.trim() || result.match_name,
       outcomeKey: "CUSTOM",
       bookmaker: bookmaker.trim() || "Manual",
@@ -134,10 +134,10 @@ export default function EVCalculatorForm() {
         <div className="flex items-center justify-between border-b border-sb-border pb-3">
           <div>
             <h2 className="text-sm font-extrabold uppercase tracking-wider text-white">
-              Parámetros de Entrada
+              Input Parameters
             </h2>
             <p className="text-xs text-slate-400">
-              Validación directa contra <code>POST /api/v1/calculations/ev</code>
+              Direct validation against <code>POST /api/v1/calculations/ev</code>
             </p>
           </div>
           <div className="flex rounded border border-sb-border bg-sb-canvas p-0.5 text-[11px] font-mono font-bold">
@@ -161,7 +161,7 @@ export default function EVCalculatorForm() {
                   : "text-slate-400 hover:text-white"
               }`}
             >
-              Americano
+              American
             </button>
           </div>
         </div>
@@ -170,13 +170,13 @@ export default function EVCalculatorForm() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                Partido / Evento
+                Match / Event
               </label>
               <input
                 type="text"
                 value={matchName}
                 onChange={(e) => setMatchName(e.target.value)}
-                placeholder="Ej. Local vs Visitante"
+                placeholder="e.g. Home vs Away"
                 required
                 className="mt-1 w-full rounded border border-sb-border bg-sb-canvas px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-sb-blue focus:outline-none"
               />
@@ -184,25 +184,25 @@ export default function EVCalculatorForm() {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                  Selección
+                  Selection
                 </label>
                 <input
                   type="text"
                   value={selectionLabel}
                   onChange={(e) => setSelectionLabel(e.target.value)}
-                  placeholder="Ej. Local ML"
+                  placeholder="e.g. Home ML"
                   className="mt-1 w-full rounded border border-sb-border bg-sb-canvas px-2.5 py-2 text-xs text-white placeholder-slate-500 focus:border-sb-blue focus:outline-none"
                 />
               </div>
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                  Casa
+                  Bookmaker
                 </label>
                 <input
                   type="text"
                   value={bookmaker}
                   onChange={(e) => setBookmaker(e.target.value)}
-                  placeholder="Casa de apuestas"
+                  placeholder="Sportsbook"
                   className="mt-1 w-full rounded border border-sb-border bg-sb-canvas px-2.5 py-2 text-xs text-white placeholder-slate-500 focus:border-sb-blue focus:outline-none"
                 />
               </div>
@@ -213,8 +213,8 @@ export default function EVCalculatorForm() {
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
                 {inputMode === "DECIMAL"
-                  ? "Momio Decimal (>1.0)"
-                  : "Momio US (ej. -110, 135)"}
+                  ? "Decimal Odds (>1.0)"
+                  : "US Odds (e.g. -110, 135)"}
               </label>
               <input
                 type="number"
@@ -227,7 +227,7 @@ export default function EVCalculatorForm() {
               />
               {resolvedDecimalOdds > 1.0 && (
                 <p className="mt-1 font-mono text-[10px] text-slate-500">
-                  Equivale a:{" "}
+                  Equivalent to:{" "}
                   {inputMode === "DECIMAL"
                     ? decimalToAmerican(resolvedDecimalOdds)
                     : resolvedDecimalOdds.toFixed(3)}
@@ -237,7 +237,7 @@ export default function EVCalculatorForm() {
 
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                Prob. Real (%)
+                True Prob. (%)
               </label>
               <input
                 type="number"
@@ -250,7 +250,7 @@ export default function EVCalculatorForm() {
               />
               {resolvedProbFraction > 0 && (
                 <p className="mt-1 font-mono text-[10px] text-slate-500">
-                  Fracción API: {resolvedProbFraction.toFixed(4)}
+                  API Fraction: {resolvedProbFraction.toFixed(4)}
                 </p>
               )}
             </div>
@@ -276,7 +276,7 @@ export default function EVCalculatorForm() {
                   }
                   className="mt-1 font-mono text-[10px] font-semibold text-blue-400 hover:underline"
                 >
-                  Usar 1/4 Kelly ({formatMoney(kellyPreview.quarterKellyStake)})
+                  Use 1/4 Kelly ({formatMoney(kellyPreview.quarterKellyStake)})
                 </button>
               )}
             </div>
@@ -284,7 +284,7 @@ export default function EVCalculatorForm() {
 
           {errorMessage && (
             <div className="rounded border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300">
-              <p className="font-bold">Rechazado por validación:</p>
+              <p className="font-bold">Validation error:</p>
               <p className="mt-0.5">{errorMessage}</p>
               {fieldErrors.length > 0 && (
                 <ul className="mt-1.5 list-disc pl-4 font-mono text-[11px]">
@@ -306,8 +306,8 @@ export default function EVCalculatorForm() {
             <IconBolt className="h-4 w-4" />
             <span>
               {isLoading
-                ? "Ejecutando Motor Cuantitativo..."
-                : "Calcular Valor Esperado (+EV)"}
+                ? "Running Quantitative Engine..."
+                : "Calculate Expected Value (+EV)"}
             </span>
           </button>
         </div>
@@ -318,10 +318,10 @@ export default function EVCalculatorForm() {
         <div className="flex items-center justify-between border-b border-sb-border pb-3">
           <div>
             <h2 className="text-sm font-extrabold uppercase tracking-wider text-white">
-              Dictamen Cuantitativo &amp; Dimensionamiento Kelly
+              Quantitative Assessment &amp; Kelly Sizing
             </h2>
             <p className="text-xs text-slate-400">
-              Comparativa de ventaja real sobre el vigorish de la casa
+              True edge comparison against bookmaker vigorish
             </p>
           </div>
           <IconShield className="h-5 w-5 text-blue-400" />
@@ -351,7 +351,7 @@ export default function EVCalculatorForm() {
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
               <div className="rounded border border-sb-border bg-sb-canvas p-3">
                 <p className="text-[10px] font-bold uppercase text-slate-500">
-                  Valor Esperado
+                  Expected Value
                 </p>
                 <p
                   className={`mt-1 font-mono text-base font-black tabular-nums ${
@@ -367,7 +367,7 @@ export default function EVCalculatorForm() {
               </div>
               <div className="rounded border border-sb-border bg-sb-canvas p-3">
                 <p className="text-[10px] font-bold uppercase text-slate-500">
-                  Ventaja / Edge
+                  Edge %
                 </p>
                 <p className="mt-1 font-mono text-base font-black text-white tabular-nums">
                   {result.ev_percentage > 0 ? "+" : ""}
@@ -376,7 +376,7 @@ export default function EVCalculatorForm() {
               </div>
               <div className="rounded border border-sb-border bg-sb-canvas p-3">
                 <p className="text-[10px] font-bold uppercase text-slate-500">
-                  Ganancia Neta
+                  Net Profit
                 </p>
                 <p className="mt-1 font-mono text-base font-bold text-emerald-400 tabular-nums">
                   +{formatMoney(result.potential_profit)}
@@ -384,7 +384,7 @@ export default function EVCalculatorForm() {
               </div>
               <div className="rounded border border-sb-border bg-sb-canvas p-3">
                 <p className="text-[10px] font-bold uppercase text-slate-500">
-                  Prob. Implícita
+                  Implied Prob.
                 </p>
                 <p className="mt-1 font-mono text-base font-bold text-slate-200 tabular-nums">
                   {(result.implied_probability * 100).toFixed(2)}%
@@ -397,7 +397,7 @@ export default function EVCalculatorForm() {
               <div className="rounded border border-sb-border bg-sb-canvas p-3">
                 <div className="mb-2 flex items-center justify-between text-[11px]">
                   <span className="font-bold uppercase tracking-wider text-slate-400">
-                    Gestión de Riesgo Kelly (Bankroll{" "}
+                    Kelly Risk Management (Bankroll{" "}
                     {formatMoney(availableBankroll)})
                   </span>
                   <span className="font-mono text-blue-400 tabular-nums">
@@ -408,7 +408,7 @@ export default function EVCalculatorForm() {
                 <div className="grid grid-cols-3 gap-2 text-center font-mono text-xs tabular-nums">
                   <div className="rounded border border-sb-border bg-sb-panel p-2">
                     <span className="block font-sans text-[10px] text-slate-400">
-                      1/4 Kelly (Conservador)
+                      1/4 Kelly (Conservative)
                     </span>
                     <strong className="text-blue-400">
                       {formatMoney(
@@ -422,7 +422,7 @@ export default function EVCalculatorForm() {
                   </div>
                   <div className="rounded border border-sb-border bg-sb-panel p-2">
                     <span className="block font-sans text-[10px] text-slate-400">
-                      1/2 Kelly (Moderado)
+                      1/2 Kelly (Moderate)
                     </span>
                     <strong className="text-slate-200">
                       {formatMoney(
@@ -436,7 +436,7 @@ export default function EVCalculatorForm() {
                   </div>
                   <div className="rounded border border-sb-border bg-sb-panel p-2">
                     <span className="block font-sans text-[10px] text-slate-400">
-                      Full Kelly (Agresivo)
+                      Full Kelly (Aggressive)
                     </span>
                     <strong className="text-slate-300">
                       {formatMoney(
@@ -457,7 +457,7 @@ export default function EVCalculatorForm() {
             {savedNotice ? (
               <div className="flex items-center justify-center gap-2 rounded border border-emerald-500/40 bg-emerald-500/10 py-2.5 text-xs font-bold text-emerald-300">
                 <IconCheck className="h-4 w-4" />
-                <span>Guardada en tu portafolio de Mis Apuestas</span>
+                <span>Saved to your My Bets portfolio</span>
               </div>
             ) : (
               <button
@@ -465,7 +465,7 @@ export default function EVCalculatorForm() {
                 onClick={handleSaveToPortfolio}
                 className="w-full rounded border border-blue-500/50 bg-sb-blue/15 py-2.5 text-xs font-bold text-blue-300 transition hover:bg-sb-blue hover:text-white"
               >
-                + Registrar esta Simulación en Mi Bankroll (
+                + Log this Simulation to My Bankroll (
                 {formatMoney(result.stake)})
               </button>
             )}
@@ -474,10 +474,10 @@ export default function EVCalculatorForm() {
           <div className="mt-4 flex h-64 flex-col items-center justify-center rounded border border-dashed border-sb-border bg-sb-canvas/60 p-6 text-center">
             <IconBolt className="h-7 w-7 text-slate-600" />
             <p className="mt-2 text-xs font-bold text-slate-300">
-              Listo para evaluar escenario
+              Ready to evaluate scenario
             </p>
             <p className="mt-1 max-w-sm text-[11px] text-slate-500">
-              Ingresa cualquier cuota (Decimal o Americana) y tu probabilidad estimada para calcular el Valor Esperado exacto y el stake óptimo de Kelly.
+              Enter any odds (Decimal or American) and your estimated probability to calculate exact Expected Value and optimal Kelly stake.
             </p>
           </div>
         )}

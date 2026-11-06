@@ -6,7 +6,7 @@ import { BettingProvider } from "@/context/BettingContext";
 export const metadata: Metadata = {
   title: "BetMetrics | Sportsbook +EV & Paper Betting",
   description:
-    "Plataforma cuantitativa de análisis deportivo, detección de ventaja matemática (+EV), Criterio de Kelly y Paper Betting.",
+    "Quantitative sports analysis platform, mathematical edge detection (+EV), Kelly Criterion, and Paper Betting.",
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.png",
@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
+    <html lang="en">
       <body className="min-h-screen bg-sb-canvas font-sans text-slate-100">
         <BettingProvider>
           <Navbar />

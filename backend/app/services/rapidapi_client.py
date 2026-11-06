@@ -43,7 +43,7 @@ class RapidAPIClientService:
     def _ensure_api_key_configured(cls) -> None:
         if not settings.RAPIDAPI_KEY or not settings.RAPIDAPI_KEY.strip():
             raise ExternalServiceUnavailableError(
-                "RAPIDAPI_KEY no está configurada en las variables de entorno (.env)."
+                "RAPIDAPI_KEY is not configured in the environment variables (.env)."
             )
 
     @classmethod
@@ -81,7 +81,7 @@ class RapidAPIClientService:
                 response.raise_for_status()
                 raw_sports = response.json()
                 if not isinstance(raw_sports, list):
-                    raise ValueError("Formato inesperado en /v4/sports de RapidAPI.")
+                    raise ValueError("Unexpected format in /v4/sports from RapidAPI.")
 
             catalog: List[Dict[str, str]] = []
             for item in raw_sports:
@@ -118,11 +118,11 @@ class RapidAPIClientService:
                 and exc.response.status_code == 429
             ):
                 raise ExternalServiceUnavailableError(
-                    "Límite de peticiones agotado en RapidAPI (HTTP 429) al consultar deportes activos y no hay respaldo previo en Redis."
+                    "RapidAPI request quota exceeded (HTTP 429) while fetching active sports and no prior backup exists in Redis."
                 ) from exc
 
             raise ExternalServiceUnavailableError(
-                "No fue posible obtener el catálogo de deportes activos desde RapidAPI ni desde Redis."
+                "Could not fetch the active sports catalog from RapidAPI or Redis."
             ) from exc
 
     @classmethod
@@ -280,7 +280,7 @@ class RapidAPIClientService:
             response.raise_for_status()
             payload = response.json()
             if not isinstance(payload, list):
-                raise ValueError("Formato inesperado de respuesta desde RapidAPI.")
+                raise ValueError("Unexpected response format from RapidAPI.")
             return cls._normalize_rapidapi_payload(payload, sport)
 
     @classmethod
@@ -338,12 +338,12 @@ class RapidAPIClientService:
 
             if is_rate_limit:
                 raise ExternalServiceUnavailableError(
-                    f"Cuota de RapidAPI agotada (HTTP 429 Too Many Requests) y no existe caché previa en Redis para '{sport}'."
+                    f"RapidAPI quota exceeded (HTTP 429 Too Many Requests) and no prior cache exists in Redis for '{sport}'."
                 ) from exc
 
             if is_unauthorized:
                 raise ExternalServiceUnavailableError(
-                    f"RapidAPI rechazó las credenciales (HTTP {exc.response.status_code}). Verifica tu RAPIDAPI_KEY y suscripción a The Odds API."
+                    f"RapidAPI rejected the credentials (HTTP {exc.response.status_code}). Check your RAPIDAPI_KEY and The Odds API subscription."
                 ) from exc
 
             if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (
@@ -351,11 +351,11 @@ class RapidAPIClientService:
                 422,
             ):
                 raise ExternalServiceUnavailableError(
-                    f"La liga o deporte '{sport}' no está disponible o no soporta mercado H2H en RapidAPI (HTTP {exc.response.status_code})."
+                    f"The league or sport '{sport}' is unavailable or does not support H2H markets in RapidAPI (HTTP {exc.response.status_code})."
                 ) from exc
 
             raise ExternalServiceUnavailableError(
-                f"Error de comunicación con RapidAPI para '{sport}' y no existe respaldo previo en Redis."
+                f"Communication error with RapidAPI for '{sport}' and no prior backup exists in Redis."
             ) from exc
 
     @classmethod
