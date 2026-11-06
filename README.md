@@ -215,7 +215,7 @@ El boleto interactivo sugiere por defecto **$\frac{1}{4}$ de Kelly** ($0.25 \cdo
 
 Con Docker corriendo en `http://localhost:8000`, abre `tests.http` en VS Code con la extensión **REST Client** (`humao.rest-client`), ajusta `@adminToken` al valor de tu `.env` y ejecuta las peticiones en orden. Las solicitudes `0.1`–`0.8` cubren registro, login, perfil, paper bets y liquidación; el token JWT se reutiliza mediante las respuestas nombradas (`{{login.response.body.access_token}}`). Después continúan las pruebas de catálogo, cálculo `+EV`, validaciones `400` y protección `401` / `200` del endpoint administrativo.
 
-> `0.1` devuelve `409 Conflict` si el usuario `demo@betmetrics.local` ya existe; en ese caso salta directo a `0.2` (login).
+> `0.1` devuelve `409 Conflict` si el usuario `demo@betmetrics.app` ya existe; en ese caso salta directo a `0.2` (login).
 
 ---
 

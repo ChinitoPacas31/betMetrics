@@ -20,7 +20,7 @@ POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
 {
-  "email": "demo@betmetrics.local",
+  "email": "demo@betmetrics.app",
   "password": "demo-password-123",
   "display_name": "Demo Bettor"
 }
@@ -33,7 +33,7 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "demo@betmetrics.local",
+  "email": "demo@betmetrics.app",
   "password": "demo-password-123"
 }
 
@@ -51,7 +51,7 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "demo@betmetrics.local",
+  "email": "demo@betmetrics.app",
   "password": "wrong-password"
 }
 
