@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import { BettingProvider } from "@/context/BettingContext";
+import AuthGate from "@/components/AuthGate";
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
   title: "BetMetrics | Sportsbook +EV & Paper Betting",
@@ -22,12 +22,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-sb-canvas font-sans text-slate-100">
-        <BettingProvider>
-          <Navbar />
-          <main className="mx-auto max-w-[1640px] px-3 py-4 sm:px-5">
-            {children}
-          </main>
-        </BettingProvider>
+        <AuthProvider>
+          <AuthGate>{children}</AuthGate>
+        </AuthProvider>
       </body>
     </html>
   );

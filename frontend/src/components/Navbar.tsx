@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import { useBetting } from "@/context/BettingContext";
 import { ApiClientError, syncOddsCache } from "@/lib/api";
 import { formatMoney } from "@/lib/oddsUtils";
@@ -12,12 +13,16 @@ import {
   IconCheck,
   IconClose,
   IconHistory,
+  IconLogout,
   IconRefresh,
+  IconUser,
   IconWallet,
 } from "./Icons";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
   const {
     oddsFormat,
     setOddsFormat,
@@ -35,6 +40,7 @@ export default function Navbar() {
 
   const [bankPopoverOpen, setBankPopoverOpen] = useState(false);
   const [bankInput, setBankInput] = useState(String(startingBankroll));
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [adminToken, setAdminToken] = useState("");
   const [syncLoading, setSyncLoading] = useState(false);
@@ -44,10 +50,33 @@ export default function Navbar() {
   } | null>(null);
 
   const popoverRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setBankInput(String(startingBankroll));
   }, [startingBankroll]);
+
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(e.target as Node)
+      ) {
+        setUserMenuOpen(false);
+      }
+    }
+    if (userMenuOpen) {
+      document.addEventListener("mousedown", handleOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [userMenuOpen]);
+
+  const userInitials = (user?.display_name || "BM")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
 
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
@@ -353,6 +382,62 @@ export default function Navbar() {
                       Reset Bankroll ($10,000) &amp; History
                     </button>
                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* Menú de usuario */}
+            <div className="relative" ref={userMenuRef}>
+              <button
+                type="button"
+                onClick={() => setUserMenuOpen((open) => !open)}
+                aria-label="Account menu"
+                className="flex items-center gap-2 rounded-md border border-sb-border bg-sb-panel py-1.5 pl-1.5 pr-2.5 transition hover:border-blue-500/50 hover:bg-sb-surface"
+              >
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sb-blue text-[11px] font-black text-white">
+                  {userInitials}
+                </span>
+                <span className="hidden max-w-[110px] truncate text-xs font-semibold text-slate-200 lg:block">
+                  {user?.display_name}
+                </span>
+              </button>
+
+              {userMenuOpen && (
+                <div className="absolute right-0 mt-2 w-64 rounded-lg border border-sb-border-light bg-sb-panel p-3 shadow-2xl">
+                  <div className="flex items-center gap-2.5 border-b border-sb-border pb-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sb-blue text-xs font-black text-white">
+                      {userInitials}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-bold text-white">
+                        {user?.display_name}
+                      </p>
+                      <p className="truncate text-[10px] text-slate-400">
+                        {user?.email}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-2.5 flex items-center justify-between rounded border border-sb-border bg-sb-canvas px-2.5 py-2 text-[11px]">
+                    <span className="flex items-center gap-1.5 text-slate-400">
+                      <IconUser className="h-3.5 w-3.5" />
+                      Odds format
+                    </span>
+                    <span className="font-mono font-bold text-slate-200">
+                      {oddsFormat}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      logout();
+                      setUserMenuOpen(false);
+                      router.replace("/login");
+                    }}
+                    className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded border border-rose-500/30 bg-rose-500/10 py-2 text-[11px] font-bold text-rose-300 transition hover:bg-rose-500/20"
+                  >
+                    <IconLogout className="h-3.5 w-3.5" />
+                    Sign out
+                  </button>
                 </div>
               )}
             </div>
