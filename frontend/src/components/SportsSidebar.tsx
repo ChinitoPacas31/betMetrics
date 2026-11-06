@@ -86,7 +86,7 @@ export default function SportsSidebar() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filtrar equipos en pantalla..."
+              placeholder="Filter teams on screen..."
               className="w-full rounded border border-sb-border bg-sb-canvas py-1.5 pl-8 pr-7 text-xs text-white placeholder-slate-500 focus:border-sb-blue focus:outline-none"
             />
             {searchQuery && (
@@ -115,7 +115,7 @@ export default function SportsSidebar() {
                   onlyPositiveEV ? "text-blue-400" : "text-emerald-400"
                 }`}
               />
-              <span>Solo Valor +EV (&gt;3%)</span>
+              <span>Only +EV Value (&gt;3%)</span>
             </span>
             <span
               className={`h-2 w-2 rounded-full ${
@@ -129,13 +129,13 @@ export default function SportsSidebar() {
         <div className="overflow-hidden rounded-lg border border-sb-border bg-sb-panel">
           <div className="flex items-center justify-between border-b border-sb-border bg-sb-header px-3 py-2">
             <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              Ligas Activas ({sportsCatalog.length})
+              Active Leagues ({sportsCatalog.length})
             </h2>
             <button
               type="button"
               onClick={reloadSportsCatalog}
               disabled={sportsLoading}
-              title="Recargar catálogo de deportes desde RapidAPI"
+              title="Reload sports catalog from RapidAPI"
               className="text-slate-400 transition hover:text-blue-400 disabled:opacity-50"
             >
               <IconRefresh
@@ -151,7 +151,7 @@ export default function SportsSidebar() {
                 type="text"
                 value={leagueFilter}
                 onChange={(e) => setLeagueFilter(e.target.value)}
-                placeholder="Buscar liga o deporte..."
+                placeholder="Search league or sport..."
                 className="w-full rounded border border-sb-border bg-sb-canvas px-2.5 py-1 text-[11px] text-white placeholder-slate-500 focus:border-sb-blue focus:outline-none"
               />
             </div>
@@ -168,19 +168,19 @@ export default function SportsSidebar() {
             </div>
           ) : sportsError && sportsCatalog.length === 0 ? (
             <div className="space-y-2 p-3 text-xs text-rose-300">
-              <p className="font-semibold">Catálogo no disponible</p>
+              <p className="font-semibold">Catalog unavailable</p>
               <p className="text-[11px] text-rose-300/80">{sportsError}</p>
               <button
                 type="button"
                 onClick={reloadSportsCatalog}
                 className="w-full rounded bg-sb-blue py-1.5 text-[11px] font-bold text-white hover:bg-sb-blue-hover"
               >
-                Reintentar carga
+                Retry loading
               </button>
             </div>
           ) : groupedCategories.length === 0 ? (
             <div className="p-4 text-center text-xs text-slate-400">
-              Sin ligas activas para &ldquo;{leagueFilter}&rdquo;.
+              No active leagues for &ldquo;{leagueFilter}&rdquo;.
             </div>
           ) : (
             <div className="divide-y divide-sb-border/60">

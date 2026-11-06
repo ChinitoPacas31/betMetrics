@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     RAPIDAPI_KEY: str = ""
     RAPIDAPI_HOST: str = "odds.p.rapidapi.com"
     REDIS_URL: str = "redis://localhost:6379/0"
+    DATABASE_URL: str = ""
+    JWT_SECRET_KEY: str = ""
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
     CACHE_TTL_SECONDS: int = 300
     STALE_CACHE_TTL_SECONDS: int = 86400
     SPORTS_CACHE_TTL_SECONDS: int = 3600
@@ -19,6 +23,12 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ]
+
+    @property
+    def jwt_signing_key(self) -> str:
+        """Secreto de firma JWT; usa el token admin solo como respaldo de desarrollo."""
+        return self.JWT_SECRET_KEY or self.API_SECRET_TOKEN
+
 
     model_config = SettingsConfigDict(
         env_file=".env",

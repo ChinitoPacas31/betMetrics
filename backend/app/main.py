@@ -1,10 +1,14 @@
 import logging
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
 from app.api.v1.router import api_v1_router
 from app.core.config import settings
+from app.core.database import close_db, init_db
 from app.core.exceptions import register_exception_handlers
 
 logging.basicConfig(
@@ -12,6 +16,15 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
 )
 logger = logging.getLogger("betmetrics.main")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    await init_db()
+    try:
+        yield
+    finally:
+        await close_db()
 
 
 def create_application() -> FastAPI:
@@ -24,6 +37,7 @@ def create_application() -> FastAPI:
         version="1.0.0",
         docs_url="/docs",
         redoc_url="/redoc",
+        lifespan=lifespan,
     )
 
     # Configuración CORS para permitir consumo desde el frontend Next.js

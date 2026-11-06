@@ -10,10 +10,10 @@ export default function CalculatorPage() {
         </div>
         <div>
           <h1 className="text-lg font-extrabold tracking-tight text-white">
-            Calculadora Cuantitativa +EV &amp; Criterio de Kelly
+            Quantitative +EV &amp; Kelly Criterion Calculator
           </h1>
           <p className="text-xs text-slate-400">
-            Evalúa momios en formato Americano o Decimal contra tu probabilidad real y registra la operación en tu Bankroll virtual.
+            Evaluate American or Decimal odds against your true probability and log the position to your virtual Bankroll.
           </p>
         </div>
       </div>

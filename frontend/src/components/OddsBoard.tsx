@@ -18,14 +18,11 @@ type SortMode = "BEST_EV" | "KICKOFF";
 
 function getSourceBadgeConfig(source: string) {
   if (source === "rapidapi_live") {
-    return {
-      label: "LIVE • RAPIDAPI",
-      className: "border-emerald-500/35 bg-emerald-500/12 text-emerald-400",
-    };
+    return null;
   }
   if (source === "redis_cache") {
     return {
-      label: "REDIS • CACHÉ 5M",
+      label: "REDIS • 5M CACHE",
       className: "border-blue-500/35 bg-blue-500/12 text-blue-300",
     };
   }
@@ -80,7 +77,7 @@ export default function OddsBoard() {
         setError(
           err instanceof Error
             ? err.message
-            : "Error al conectar con el microservicio FastAPI."
+            : "Error connecting to the FastAPI microservice."
         );
       } finally {
         setIsLoading(false);
@@ -128,7 +125,7 @@ export default function OddsBoard() {
     if (found) return found;
     return {
       sport_key: activeSport,
-      title: activeSport || "Cargando ligas activas...",
+      title: activeSport || "Loading active leagues...",
       country: "",
       category: "",
       market_type: "h2h_2way",
@@ -257,7 +254,7 @@ export default function OddsBoard() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Filtrar equipos en pantalla..."
+            placeholder="Filter teams on screen..."
             className="w-full rounded-md border border-sb-border bg-sb-panel py-2 pl-8 pr-3 text-xs text-white placeholder-slate-500 focus:border-sb-blue focus:outline-none"
           />
         </div>
@@ -284,7 +281,7 @@ export default function OddsBoard() {
                 )}
               </div>
               <p className="text-xs text-slate-400">
-                Datos 100% reales vía The Odds API (RapidAPI) • De-Vigged Sharp Consensus
+                100% real-time data via The Odds API • De-Vigged Sharp Consensus
               </p>
             </div>
           </div>
@@ -293,7 +290,7 @@ export default function OddsBoard() {
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 rounded border border-sb-border bg-sb-canvas px-2.5 py-1.5">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Stake Base $
+                Base Stake $
               </span>
               <input
                 type="number"
@@ -325,7 +322,7 @@ export default function OddsBoard() {
                   showBoardSkeleton ? "animate-spin" : ""
                 }`}
               />
-              <span>Actualizar</span>
+              <span>Refresh</span>
             </button>
           </div>
         </div>
@@ -334,7 +331,7 @@ export default function OddsBoard() {
         <div className="mt-3 grid grid-cols-3 gap-2 border-t border-sb-border pt-3">
           <div className="rounded border border-sb-border/80 bg-sb-canvas px-3 py-2">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-              Eventos Activos
+              Active Events
             </span>
             <p className="mt-0.5 font-mono text-sm font-bold text-white tabular-nums">
               {marketStats.total}
@@ -342,7 +339,7 @@ export default function OddsBoard() {
           </div>
           <div className="rounded border border-sb-border/80 bg-sb-canvas px-3 py-2">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-              Líneas +EV (&gt;3%)
+              +EV Lines (&gt;3%)
             </span>
             <p className="mt-0.5 font-mono text-sm font-bold text-emerald-400 tabular-nums">
               {marketStats.greenCount}
@@ -350,7 +347,7 @@ export default function OddsBoard() {
           </div>
           <div className="rounded border border-sb-border/80 bg-sb-canvas px-3 py-2">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-              Mejor Ventaja
+              Best Edge
             </span>
             <p
               className={`mt-0.5 font-mono text-sm font-bold tabular-nums ${
@@ -368,10 +365,10 @@ export default function OddsBoard() {
       {data?.source === "redis_stale_429" && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
           <p className="font-bold text-amber-300">
-            Límite de cuota alcanzado en RapidAPI (HTTP 429 Too Many Requests)
+            RapidAPI quota limit reached (HTTP 429 Too Many Requests)
           </p>
           <p className="mt-0.5 text-amber-200/90">
-            Mostrando la última captura <strong>100% real</strong> guardada previamente en Redis (modo <em>Stale-If-Error</em>, cero datos inventados). Cuando tu cuota de RapidAPI se renueve podrás sincronizar momios frescos.
+            Showing the latest <strong>100% real</strong> snapshot previously saved in Redis (<em>Stale-If-Error</em> mode, zero synthetic data). Once your RapidAPI quota renews, you will be able to sync fresh odds.
           </p>
         </div>
       )}
@@ -379,10 +376,10 @@ export default function OddsBoard() {
       {data?.source === "redis_stale_error" && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
           <p className="font-bold text-amber-300">
-            Proveedor externo temporalmente inaccesible
+            External provider temporarily unreachable
           </p>
           <p className="mt-0.5 text-amber-200/90">
-            Mostrando la última captura real almacenada en Redis sin generar datos simulados.
+            Showing the latest real snapshot stored in Redis without generating simulated data.
           </p>
         </div>
       )}
@@ -392,10 +389,10 @@ export default function OddsBoard() {
         <div className="flex flex-wrap items-center gap-1.5">
           {(
             [
-              { id: "ALL", label: "Todos" },
-              { id: "GREEN", label: "Valor +EV (>3%)" },
+              { id: "ALL", label: "All" },
+              { id: "GREEN", label: "Value +EV (>3%)" },
               { id: "YELLOW", label: "Neutral (0–3%)" },
-              { id: "RED", label: "EV Negativo" },
+              { id: "RED", label: "Negative EV" },
             ] as const
           ).map((tab) => {
             const active = filterLight === tab.id;
@@ -432,15 +429,15 @@ export default function OddsBoard() {
 
         <div className="flex items-center gap-2 text-xs">
           <span className="hidden text-[11px] text-slate-500 sm:inline">
-            Ordenar:
+            Sort by:
           </span>
           <select
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value as SortMode)}
             className="rounded border border-sb-border bg-sb-canvas px-2.5 py-1 text-xs font-semibold text-slate-200 focus:border-sb-blue focus:outline-none"
           >
-            <option value="BEST_EV">Mayor Ventaja (+EV%)</option>
-            <option value="KICKOFF">Horario de Inicio</option>
+            <option value="BEST_EV">Highest Edge (+EV%)</option>
+            <option value="KICKOFF">Kickoff Time</option>
           </select>
         </div>
       </div>
@@ -469,15 +466,15 @@ export default function OddsBoard() {
       ) : activeError ? (
         <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-5 text-rose-200">
           <p className="text-sm font-bold">
-            No se pudieron obtener cuotas reales en este momento
+            Could not fetch live odds at this time
           </p>
           <p className="mt-1 text-xs text-rose-300">{activeError}</p>
           <p className="mt-2 text-xs text-rose-300/80">
-            BetMetrics no muestra partidos falsos ni semillas inventadas. Verifica tu contenedor FastAPI/Redis en{" "}
+            BetMetrics does not display fake matches or synthetic seeds. Check your FastAPI/Redis service at{" "}
             <code className="rounded bg-black/30 px-1.5 py-0.5 font-mono">
               http://localhost:8000
             </code>{" "}
-            y el estado de tu cuota en RapidAPI.
+            and your RapidAPI quota status.
           </p>
           <button
             type="button"
@@ -490,28 +487,28 @@ export default function OddsBoard() {
             }}
             className="mt-3 rounded bg-sb-blue px-3.5 py-1.5 text-xs font-bold text-white hover:bg-sb-blue-hover"
           >
-            Reintentar consulta
+            Retry request
           </button>
         </div>
       ) : (data?.items.length ?? 0) === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-sb-border bg-sb-panel px-4 py-12 text-center">
           <IconBolt className="h-7 w-7 text-slate-500" />
           <p className="mt-2 text-sm font-bold text-slate-200">
-            Sin eventos H2H abiertos en RapidAPI para esta liga
+            No open H2H events in RapidAPI for this league
           </p>
           <p className="mt-1 max-w-md text-xs text-slate-400">
-            El proveedor devolvió 0 partidos con líneas H2H activas en este momento para{" "}
-            <strong className="text-slate-200">{activeLeagueMeta.title}</strong>. Selecciona otra liga activa en el panel izquierdo.
+            The provider returned 0 matches with active H2H lines right now for{" "}
+            <strong className="text-slate-200">{activeLeagueMeta.title}</strong>. Please select another active league from the left panel.
           </p>
         </div>
       ) : groupedByLeague.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-sb-border bg-sb-panel px-4 py-12 text-center">
           <IconBolt className="h-7 w-7 text-slate-500" />
           <p className="mt-2 text-sm font-bold text-slate-200">
-            No hay partidos con los filtros actuales
+            No matches match the current filters
           </p>
           <p className="mt-1 text-xs text-slate-400">
-            Hay {data?.items.length ?? 0} eventos reales cargados en esta liga, pero ninguno coincide con el filtro activo.
+            There are {data?.items.length ?? 0} real events loaded in this league, but none match the active filter.
           </p>
           <button
             type="button"
@@ -522,7 +519,7 @@ export default function OddsBoard() {
             }}
             className="mt-3 rounded bg-sb-blue px-3.5 py-1.5 text-xs font-bold text-white hover:bg-sb-blue-hover"
           >
-            Limpiar Filtros
+            Clear Filters
           </button>
         </div>
       ) : (
@@ -573,9 +570,9 @@ export default function OddsBoard() {
                             : "w-[312px] grid-cols-2"
                         }`}
                       >
-                        <span>1 (Local)</span>
-                        {group.is3Way && <span>X (Empate)</span>}
-                        <span>2 (Visita)</span>
+                        <span>1 (Home)</span>
+                        {group.is3Way && <span>X (Draw)</span>}
+                        <span>2 (Away)</span>
                       </div>
                       <div className="w-8" />
                     </div>

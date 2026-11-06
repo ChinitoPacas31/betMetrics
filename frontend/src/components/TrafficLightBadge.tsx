@@ -16,7 +16,7 @@ const BADGE_CONFIG: Record<
   }
 > = {
   GREEN: {
-    label: "VALOR +EV",
+    label: "VALUE +EV",
     shortLabel: "+EV",
     containerClass:
       "bg-emerald-500/12 text-emerald-400 border-emerald-500/35",
@@ -30,7 +30,7 @@ const BADGE_CONFIG: Record<
     dotClass: "bg-amber-400",
   },
   RED: {
-    label: "EV NEGATIVO",
+    label: "NEGATIVE EV",
     shortLabel: "-EV",
     containerClass:
       "bg-rose-500/10 text-rose-400 border-rose-500/30",

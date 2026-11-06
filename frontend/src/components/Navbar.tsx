@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import { useBetting } from "@/context/BettingContext";
 import { ApiClientError, syncOddsCache } from "@/lib/api";
 import { formatMoney } from "@/lib/oddsUtils";
@@ -12,12 +13,16 @@ import {
   IconCheck,
   IconClose,
   IconHistory,
+  IconLogout,
   IconRefresh,
+  IconUser,
   IconWallet,
 } from "./Icons";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
   const {
     oddsFormat,
     setOddsFormat,
@@ -35,6 +40,7 @@ export default function Navbar() {
 
   const [bankPopoverOpen, setBankPopoverOpen] = useState(false);
   const [bankInput, setBankInput] = useState(String(startingBankroll));
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [adminToken, setAdminToken] = useState("");
   const [syncLoading, setSyncLoading] = useState(false);
@@ -44,10 +50,33 @@ export default function Navbar() {
   } | null>(null);
 
   const popoverRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setBankInput(String(startingBankroll));
   }, [startingBankroll]);
+
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(e.target as Node)
+      ) {
+        setUserMenuOpen(false);
+      }
+    }
+    if (userMenuOpen) {
+      document.addEventListener("mousedown", handleOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [userMenuOpen]);
+
+  const userInitials = (user?.display_name || "BM")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
 
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
@@ -74,7 +103,7 @@ export default function Navbar() {
     if (!activeSport) {
       setSyncFeedback({
         type: "err",
-        text: "Selecciona primero una liga activa antes de sincronizar.",
+        text: "Please select an active league before syncing.",
       });
       return;
     }
@@ -86,17 +115,17 @@ export default function Navbar() {
       if (res.source === "redis_stale_429") {
         setSyncFeedback({
           type: "warn",
-          text: `RapidAPI devolvió HTTP 429 (cuota agotada). Se preservó la última captura real en Redis para ${res.sport} (${res.synced_matches} eventos).`,
+          text: `RapidAPI returned HTTP 429 (quota exceeded). Preserved the latest real snapshot in Redis for ${res.sport} (${res.synced_matches} events).`,
         });
       } else if (res.source.startsWith("redis_stale")) {
         setSyncFeedback({
           type: "warn",
-          text: `Proveedor temporalmente inaccesible. Se preservó el respaldo real en Redis para ${res.sport} (${res.synced_matches} eventos).`,
+          text: `Provider temporarily unreachable. Preserved the real backup in Redis for ${res.sport} (${res.synced_matches} events).`,
         });
       } else {
         setSyncFeedback({
           type: "ok",
-          text: `Sincronizado en vivo (${res.sport}): ${res.synced_matches} eventos reales desde ${res.source}.`,
+          text: `Synced live (${res.sport}): ${res.synced_matches} real events from ${res.source}.`,
         });
       }
       window.dispatchEvent(new CustomEvent("betmetrics:odds-synced"));
@@ -109,7 +138,7 @@ export default function Navbar() {
       } else {
         setSyncFeedback({
           type: "err",
-          text: "No se pudo conectar con el microservicio en puerto 8000.",
+          text: "Could not connect to the microservice on port 8000.",
         });
       }
     } finally {
@@ -125,13 +154,13 @@ export default function Navbar() {
     },
     {
       href: "/bets",
-      label: "Mis Apuestas",
+      label: "My Bets",
       icon: <IconHistory className="h-3.5 w-3.5" />,
       badge: pendingCount > 0 ? pendingCount : undefined,
     },
     {
       href: "/calculator",
-      label: "Calculadora Pro",
+      label: "Calculator",
       icon: <IconCalculator className="h-3.5 w-3.5" />,
     },
   ];
@@ -148,7 +177,7 @@ export default function Navbar() {
             >
               <img
                 src="/logo.png"
-                alt="BetMetrics Isotipo"
+                alt="BetMetrics Logo"
                 width={49}
                 height={32}
                 className="h-7 w-auto object-contain sm:h-8"
@@ -193,7 +222,7 @@ export default function Navbar() {
             {/* Selector formato de momios (Decimal vs Americano estilo México) */}
             <div
               className="flex items-center rounded-md border border-sb-border bg-sb-canvas p-0.5"
-              title="Cambiar formato de momios (Decimal / Americano)"
+              title="Switch odds format (Decimal / American)"
             >
               <button
                 type="button"
@@ -220,18 +249,18 @@ export default function Navbar() {
             </div>
 
             {/* Botón Sincronización Admin */}
-            <button
+            {/* <button
               type="button"
               onClick={() => {
                 setSyncFeedback(null);
                 setSyncModalOpen(true);
               }}
               className="hidden items-center gap-1.5 rounded-md border border-sb-border bg-sb-panel px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-sb-border-light hover:bg-sb-surface hover:text-white sm:flex"
-              title="Sincronizar caché Redis con RapidAPI"
+              title="Sync Redis cache with RapidAPI"
             >
               <IconRefresh className="h-3.5 w-3.5 text-blue-400" />
               <span className="hidden lg:inline">Sync API</span>
-            </button>
+            </button> */}
 
             {/* Bankroll Virtual Interactivo */}
             <div className="relative" ref={popoverRef}>
@@ -243,7 +272,7 @@ export default function Navbar() {
                 <IconWallet className="h-4 w-4 text-blue-400" />
                 <div className="leading-tight">
                   <div className="hidden text-[9px] font-bold uppercase tracking-wider text-slate-400 sm:block">
-                    Saldo Paper
+                    Paper Balance
                   </div>
                   <div className="font-mono text-xs font-bold text-white tabular-nums">
                     {formatMoney(availableBankroll)}
@@ -255,7 +284,7 @@ export default function Navbar() {
                 <div className="absolute right-0 mt-2 w-72 rounded-lg border border-sb-border-light bg-sb-panel p-4 shadow-2xl">
                   <div className="flex items-center justify-between border-b border-sb-border pb-2.5">
                     <span className="text-xs font-bold uppercase tracking-wider text-white">
-                      Gestión de Bankroll
+                      Bankroll Management
                     </span>
                     <button
                       type="button"
@@ -269,7 +298,7 @@ export default function Navbar() {
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div className="rounded border border-sb-border bg-sb-canvas p-2">
                       <span className="text-[10px] text-slate-400">
-                        Disponible
+                        Available
                       </span>
                       <p className="mt-0.5 font-mono font-bold text-white tabular-nums">
                         {formatMoney(availableBankroll)}
@@ -277,7 +306,7 @@ export default function Navbar() {
                     </div>
                     <div className="rounded border border-sb-border bg-sb-canvas p-2">
                       <span className="text-[10px] text-slate-400">
-                        En Juego
+                        In Play
                       </span>
                       <p className="mt-0.5 font-mono font-bold text-blue-400 tabular-nums">
                         {formatMoney(pendingRisk)}
@@ -285,7 +314,7 @@ export default function Navbar() {
                     </div>
                     <div className="rounded border border-sb-border bg-sb-canvas p-2">
                       <span className="text-[10px] text-slate-400">
-                        P&amp;L Neto
+                        Net P&amp;L
                       </span>
                       <p
                         className={`mt-0.5 font-mono font-bold tabular-nums ${
@@ -301,7 +330,7 @@ export default function Navbar() {
                     </div>
                     <div className="rounded border border-sb-border bg-sb-canvas p-2">
                       <span className="text-[10px] text-slate-400">
-                        ROI Liquidado
+                        Settled ROI
                       </span>
                       <p
                         className={`mt-0.5 font-mono font-bold tabular-nums ${
@@ -320,7 +349,7 @@ export default function Navbar() {
 
                   <div className="mt-3 border-t border-sb-border pt-3">
                     <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                      Bankroll Base ($)
+                      Starting Bankroll ($)
                     </label>
                     <div className="mt-1 flex gap-1.5">
                       <input
@@ -339,7 +368,7 @@ export default function Navbar() {
                         }}
                         className="rounded bg-sb-blue px-3 py-1.5 text-xs font-bold text-white hover:bg-sb-blue-hover"
                       >
-                        Fijar
+                        Set
                       </button>
                     </div>
                     <button
@@ -350,9 +379,65 @@ export default function Navbar() {
                       }}
                       className="mt-2.5 w-full rounded border border-rose-500/30 bg-rose-500/10 py-1.5 text-[11px] font-semibold text-rose-300 transition hover:bg-rose-500/20"
                     >
-                      Reiniciar Bankroll ($10,000) e Historial
+                      Reset Bankroll ($10,000) &amp; History
                     </button>
                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* Menú de usuario */}
+            <div className="relative" ref={userMenuRef}>
+              <button
+                type="button"
+                onClick={() => setUserMenuOpen((open) => !open)}
+                aria-label="Account menu"
+                className="flex items-center gap-2 rounded-md border border-sb-border bg-sb-panel py-1.5 pl-1.5 pr-2.5 transition hover:border-blue-500/50 hover:bg-sb-surface"
+              >
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sb-blue text-[11px] font-black text-white">
+                  {userInitials}
+                </span>
+                <span className="hidden max-w-[110px] truncate text-xs font-semibold text-slate-200 lg:block">
+                  {user?.display_name}
+                </span>
+              </button>
+
+              {userMenuOpen && (
+                <div className="absolute right-0 mt-2 w-64 rounded-lg border border-sb-border-light bg-sb-panel p-3 shadow-2xl">
+                  <div className="flex items-center gap-2.5 border-b border-sb-border pb-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sb-blue text-xs font-black text-white">
+                      {userInitials}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-bold text-white">
+                        {user?.display_name}
+                      </p>
+                      <p className="truncate text-[10px] text-slate-400">
+                        {user?.email}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-2.5 flex items-center justify-between rounded border border-sb-border bg-sb-canvas px-2.5 py-2 text-[11px]">
+                    <span className="flex items-center gap-1.5 text-slate-400">
+                      <IconUser className="h-3.5 w-3.5" />
+                      Odds format
+                    </span>
+                    <span className="font-mono font-bold text-slate-200">
+                      {oddsFormat}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      logout();
+                      setUserMenuOpen(false);
+                      router.replace("/login");
+                    }}
+                    className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded border border-rose-500/30 bg-rose-500/10 py-2 text-[11px] font-bold text-rose-300 transition hover:bg-rose-500/20"
+                  >
+                    <IconLogout className="h-3.5 w-3.5" />
+                    Sign out
+                  </button>
                 </div>
               )}
             </div>
@@ -393,10 +478,10 @@ export default function Navbar() {
             <div className="flex items-center justify-between border-b border-sb-border pb-3">
               <div>
                 <h3 className="text-sm font-bold text-white">
-                  Sincronizar Caché Redis (Admin)
+                  Sync Redis Cache (Admin)
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Invalida la clave fresca actual y consulta RapidAPI en caliente
+                  Invalidates the current fresh key and queries RapidAPI live
                 </p>
               </div>
               <button
@@ -411,24 +496,24 @@ export default function Navbar() {
             <form onSubmit={handleAdminSync} className="mt-4 space-y-3">
               <div className="rounded border border-sb-border bg-sb-canvas px-3 py-2 text-xs">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  Liga seleccionada
+                  Selected League
                 </span>
                 <p className="mt-0.5 font-mono font-semibold text-blue-400">
                   {activeSport
                     ? `${activeSportTitle} (${activeSport})`
-                    : "Ninguna liga cargada"}
+                    : "No league loaded"}
                 </p>
               </div>
 
               <div>
                 <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-300">
-                  Bearer Token Administrativo
+                  Admin Bearer Token
                 </label>
                 <input
                   type="password"
                   value={adminToken}
                   onChange={(e) => setAdminToken(e.target.value)}
-                  placeholder="Ingresa tu API_SECRET_TOKEN de .env"
+                  placeholder="Enter your API_SECRET_TOKEN from .env"
                   required
                   className="mt-1 w-full rounded border border-sb-border bg-sb-canvas px-3 py-2 font-mono text-xs text-white placeholder-slate-500 focus:border-sb-blue focus:outline-none"
                 />
@@ -457,7 +542,7 @@ export default function Navbar() {
                   onClick={() => setSyncModalOpen(false)}
                   className="rounded border border-sb-border px-3.5 py-2 text-xs font-semibold text-slate-300 hover:bg-sb-surface"
                 >
-                  Cerrar
+                  Close
                 </button>
                 <button
                   type="submit"
@@ -470,7 +555,7 @@ export default function Navbar() {
                     }`}
                   />
                   <span>
-                    {syncLoading ? "Sincronizando..." : "Forzar Sync"}
+                    {syncLoading ? "Syncing..." : "Force Sync"}
                   </span>
                 </button>
               </div>

@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import { BettingProvider } from "@/context/BettingContext";
+import AuthGate from "@/components/AuthGate";
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
-  title: "BetMetrics | Sportsbook +EV & Paper Betting",
+  title: "BetMetrics | Analiza el valor. Decide con criterio.",
   description:
-    "Plataforma cuantitativa de análisis deportivo, detección de ventaja matemática (+EV), Criterio de Kelly y Paper Betting.",
+    "Analiza cuotas deportivas con datos de mercado, encuentra posibles ventajas y toma decisiones con método.",
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.png",
@@ -22,12 +22,9 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className="min-h-screen bg-sb-canvas font-sans text-slate-100">
-        <BettingProvider>
-          <Navbar />
-          <main className="mx-auto max-w-[1640px] px-3 py-4 sm:px-5">
-            {children}
-          </main>
-        </BettingProvider>
+        <AuthProvider>
+          <AuthGate>{children}</AuthGate>
+        </AuthProvider>
       </body>
     </html>
   );

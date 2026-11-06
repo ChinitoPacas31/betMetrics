@@ -67,6 +67,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             status.HTTP_401_UNAUTHORIZED: "Unauthorized",
             status.HTTP_403_FORBIDDEN: "Forbidden",
             status.HTTP_404_NOT_FOUND: "NotFound",
+            status.HTTP_409_CONFLICT: "Conflict",
             status.HTTP_429_TOO_MANY_REQUESTS: "TooManyRequests",
             status.HTTP_503_SERVICE_UNAVAILABLE: "ServiceUnavailable",
         }

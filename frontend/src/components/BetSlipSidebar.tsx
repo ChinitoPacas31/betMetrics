@@ -97,12 +97,12 @@ export default function BetSlipSidebar() {
     setPlacedSuccess(null);
 
     if (numericStake <= 0) {
-      setSlipError("Ingresa un monto de apuesta mayor a $0.");
+      setSlipError("Enter a bet stake greater than $0.");
       return;
     }
     if (numericStake > availableBankroll) {
       setSlipError(
-        `Saldo insuficiente. Tu bankroll disponible es ${formatMoney(
+        `Insufficient balance. Your available bankroll is ${formatMoney(
           availableBankroll
         )}.`
       );
@@ -119,7 +119,7 @@ export default function BetSlipSidebar() {
         stake: numericStake,
       });
 
-      placePaperBet({
+      await placePaperBet({
         matchId: activeSlip.matchId,
         matchName: activeSlip.matchName,
         league: activeSlip.league,
@@ -137,7 +137,7 @@ export default function BetSlipSidebar() {
       });
 
       setPlacedSuccess(
-        `Paper Bet registrada: ${activeSlip.selection} (${formatMoney(
+        `Paper Bet placed: ${activeSlip.selection} (${formatMoney(
           verified.stake
         )})`
       );
@@ -148,7 +148,7 @@ export default function BetSlipSidebar() {
         setSlipError(err.payload.message);
       } else {
         setSlipError(
-          "No se pudo validar la operación contra el motor +EV del backend (http://localhost:8000)."
+          "Could not validate the bet against the backend +EV engine (http://localhost:8000)."
         );
       }
     } finally {
@@ -169,7 +169,7 @@ export default function BetSlipSidebar() {
             <IconTicket className="h-3.5 w-3.5" />
           </span>
           <span className="text-xs font-extrabold uppercase tracking-wider text-white">
-            Boleto Paper Bet
+            Paper Bet Slip
           </span>
           {activeSlip && (
             <span className="rounded-full bg-sb-blue px-1.5 py-0.2 font-mono text-[10px] font-bold text-white">
@@ -183,7 +183,7 @@ export default function BetSlipSidebar() {
             <button
               type="button"
               onClick={clearSlip}
-              title="Limpiar selección"
+              title="Clear selection"
               className="rounded p-1 text-slate-400 transition hover:bg-sb-surface hover:text-rose-400"
             >
               <IconTrash className="h-3.5 w-3.5" />
@@ -210,7 +210,7 @@ export default function BetSlipSidebar() {
               : "border-transparent text-slate-400 hover:text-slate-200"
           }`}
         >
-          Selección Activa
+          Active Selection
         </button>
         <button
           type="button"
@@ -221,7 +221,7 @@ export default function BetSlipSidebar() {
               : "border-transparent text-slate-400 hover:text-slate-200"
           }`}
         >
-          Simulador Libre
+          Quick Simulator
         </button>
       </div>
 
@@ -237,7 +237,7 @@ export default function BetSlipSidebar() {
                   href="/bets"
                   className="mt-1 inline-block font-bold text-blue-400 underline hover:text-blue-300"
                 >
-                  Ver y liquidar en Mis Apuestas →
+                  View and settle in My Bets →
                 </Link>
               </div>
             </div>
@@ -271,7 +271,7 @@ export default function BetSlipSidebar() {
                       {activeSlip.selection}
                     </span>
                     <p className="text-[10px] text-slate-400">
-                      Mejor línea: {activeSlip.bookmaker}
+                      Best line: {activeSlip.bookmaker}
                     </p>
                   </div>
                   <span className="rounded bg-sb-blue px-2 py-1 font-mono text-sm font-black text-white tabular-nums">
@@ -284,7 +284,7 @@ export default function BetSlipSidebar() {
               <div className="rounded-md border border-sb-border bg-sb-canvas p-3">
                 <div className="flex items-center justify-between text-xs">
                   <label className="font-semibold text-slate-300">
-                    Prob. Real Estimada (%)
+                    Estimated True Prob. (%)
                   </label>
                   <div className="flex items-center gap-1">
                     <input
@@ -312,7 +312,7 @@ export default function BetSlipSidebar() {
 
                 <div className="mt-1.5 flex items-center justify-between text-[10px] text-slate-400">
                   <span>
-                    Implícita Casa:{" "}
+                    Bookie Implied:{" "}
                     <strong className="font-mono text-slate-200 tabular-nums">
                       {(liveMetrics.impliedProbability * 100).toFixed(1)}%
                     </strong>
@@ -326,7 +326,7 @@ export default function BetSlipSidebar() {
                     }
                     className="font-semibold text-blue-400 hover:underline"
                   >
-                    Restaurar Consenso (
+                    Restore Consensus (
                     {(activeSlip.consensusProbability * 100).toFixed(1)}%)
                   </button>
                 </div>
@@ -336,10 +336,10 @@ export default function BetSlipSidebar() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-slate-300">
-                    Monto Paper Stake ($)
+                    Paper Stake Amount ($)
                   </label>
                   <span className="font-mono text-[10px] text-slate-400 tabular-nums">
-                    Disp: {formatMoney(availableBankroll)}
+                    Avail: {formatMoney(availableBankroll)}
                   </span>
                 </div>
 
@@ -383,7 +383,7 @@ export default function BetSlipSidebar() {
                   >
                     <span className="flex items-center gap-1.5 font-semibold text-blue-300">
                       <IconBolt className="h-3.5 w-3.5 text-blue-400" />
-                      <span>Usar 1/4 Kelly Óptimo</span>
+                      <span>Use Optimal 1/4 Kelly</span>
                     </span>
                     <span className="font-mono font-bold text-white tabular-nums">
                       {formatMoney(liveMetrics.quarterKellyStake)}
@@ -395,7 +395,7 @@ export default function BetSlipSidebar() {
               {/* Desglose Financiero y Semáforo +EV */}
               <div className="space-y-2 rounded-md border border-sb-border bg-sb-canvas p-3 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Clasificación:</span>
+                  <span className="text-slate-400">Rating:</span>
                   <TrafficLightBadge
                     color={liveMetrics.trafficLight}
                     evPercentage={liveMetrics.evPercentage}
@@ -403,20 +403,20 @@ export default function BetSlipSidebar() {
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Ganancia Neta:</span>
+                  <span className="text-slate-400">Net Profit:</span>
                   <span className="font-mono font-bold text-slate-200 tabular-nums">
                     {formatMoney(liveMetrics.potentialProfit, true)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Retorno Total:</span>
+                  <span className="text-slate-400">Total Payout:</span>
                   <span className="font-mono font-bold text-white tabular-nums">
                     {formatMoney(liveMetrics.totalPayout)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between border-t border-sb-border pt-2">
                   <span className="font-bold text-slate-200">
-                    Valor Esperado (EV):
+                    Expected Value (EV):
                   </span>
                   <span
                     className={`font-mono text-sm font-black tabular-nums ${
@@ -446,10 +446,10 @@ export default function BetSlipSidebar() {
                 className="w-full rounded-md bg-sb-blue py-2.5 text-xs font-extrabold uppercase tracking-wider text-white shadow-lg shadow-blue-950/60 transition hover:bg-sb-blue-hover disabled:opacity-50"
               >
                 {placing
-                  ? "Validando en Motor +EV..."
+                  ? "Validating in +EV Engine..."
                   : numericStake > 0
-                  ? `Colocar Paper Bet (${formatMoney(numericStake)})`
-                  : "Ingresa un monto de apuesta"}
+                  ? `Place Paper Bet (${formatMoney(numericStake)})`
+                  : "Enter a stake amount"}
               </button>
             </div>
           ) : (
@@ -459,10 +459,10 @@ export default function BetSlipSidebar() {
                 <IconTicket className="h-5 w-5" />
               </div>
               <p className="mt-3 text-xs font-bold text-slate-200">
-                Tu boleto está vacío
+                Your bet slip is empty
               </p>
               <p className="mt-1 px-2 text-[11px] leading-relaxed text-slate-400">
-                Haz clic en cualquier momio real de las tablas centrales para evaluar su ventaja matemática (+EV) y registrar tu simulación.
+                Click on any live odds from the main board to evaluate its mathematical edge (+EV) and log your simulation.
               </p>
             </div>
           )}
@@ -472,13 +472,13 @@ export default function BetSlipSidebar() {
             <div className="mt-4 border-t border-sb-border pt-3">
               <div className="mb-2 flex items-center justify-between text-[11px]">
                 <span className="font-bold uppercase tracking-wider text-slate-400">
-                  En Juego ({recentPendingBets.length})
+                  In Play ({recentPendingBets.length})
                 </span>
                 <Link
                   href="/bets"
                   className="font-semibold text-blue-400 hover:underline"
                 >
-                  Gestionar todas →
+                  Manage all →
                 </Link>
               </div>
               <div className="space-y-1.5">
@@ -514,13 +514,13 @@ export default function BetSlipSidebar() {
         <div className="space-y-3 p-3.5 text-xs">
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Evento / Nota (Opcional)
+              Event / Note (Optional)
             </label>
             <input
               type="text"
               value={quickMatch}
               onChange={(e) => setQuickMatch(e.target.value)}
-              placeholder="Ingresa el partido a evaluar..."
+              placeholder="Enter match to evaluate..."
               className="mt-1 w-full rounded border border-sb-border bg-sb-canvas px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:border-sb-blue focus:outline-none"
             />
           </div>
@@ -528,7 +528,7 @@ export default function BetSlipSidebar() {
           <div className="grid grid-cols-3 gap-2">
             <div>
               <label className="block text-[10px] font-bold uppercase text-slate-400">
-                Cuota Dec
+                Dec Odds
               </label>
               <input
                 type="number"
@@ -574,7 +574,7 @@ export default function BetSlipSidebar() {
           {quickMetrics ? (
             <div className="space-y-2 rounded border border-sb-border bg-sb-canvas p-3">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Semáforo:</span>
+                <span className="text-slate-400">Signal:</span>
                 <TrafficLightBadge
                   color={quickMetrics.trafficLight}
                   evPercentage={quickMetrics.evPercentage}
@@ -582,27 +582,27 @@ export default function BetSlipSidebar() {
                 />
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Momio Equivalente:</span>
+                <span className="text-slate-400">Equivalent Odds:</span>
                 <span className="font-mono font-bold text-white tabular-nums">
                   {parsedQuickOdds.toFixed(2)} (
                   {formatOdds(parsedQuickOdds, "AMERICAN")})
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Prob. Implícita:</span>
+                <span className="text-slate-400">Implied Prob.:</span>
                 <span className="font-mono text-slate-300 tabular-nums">
                   {(quickMetrics.impliedProbability * 100).toFixed(2)}%
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">1/4 Kelly Sugerido:</span>
+                <span className="text-slate-400">Suggested 1/4 Kelly:</span>
                 <span className="font-mono font-bold text-blue-400 tabular-nums">
                   {formatMoney(quickMetrics.quarterKellyStake)}
                 </span>
               </div>
               <div className="flex items-center justify-between border-t border-sb-border pt-2">
                 <span className="font-bold text-slate-200">
-                  Valor Esperado:
+                  Expected Value:
                 </span>
                 <span
                   className={`font-mono text-sm font-black tabular-nums ${
@@ -619,7 +619,7 @@ export default function BetSlipSidebar() {
             </div>
           ) : (
             <div className="rounded border border-dashed border-sb-border bg-sb-canvas/60 p-3 text-center text-[11px] text-slate-400">
-              Ingresa cuota (&gt;1.01), probabilidad (1–99%) y stake para calcular el EV al instante.
+              Enter odds (&gt;1.01), probability (1–99%), and stake to calculate EV instantly.
             </div>
           )}
 
@@ -627,7 +627,7 @@ export default function BetSlipSidebar() {
             href="/calculator"
             className="block w-full rounded border border-blue-500/40 bg-sb-blue/15 py-2 text-center text-xs font-bold text-blue-300 transition hover:bg-sb-blue/25"
           >
-            Abrir Calculadora Pro Completa →
+            Open Full Calculator →
           </Link>
         </div>
       )}
@@ -654,7 +654,7 @@ export default function BetSlipSidebar() {
               <div className="leading-tight">
                 <p className="text-xs font-extrabold">{activeSlip.selection}</p>
                 <p className="text-[11px] text-blue-100">
-                  Toca para abrir tu Boleto Paper Bet
+                  Tap to open your Paper Bet Slip
                 </p>
               </div>
             </div>
