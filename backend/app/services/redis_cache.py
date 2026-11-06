@@ -15,6 +15,7 @@ class RedisCacheService:
 
     SPORTS_FRESH_KEY = "betmetrics:sports:fresh"
     SPORTS_STALE_KEY = "betmetrics:sports:stale"
+    TEAM_LOGO_RATE_LIMIT_KEY = "betmetrics:team-logo:rate:v1"
 
     def __init__(self) -> None:
         self._redis_client: Optional[redis.Redis] = None
@@ -123,6 +124,51 @@ class RedisCacheService:
         self, cache_key: str, logo_url: Optional[str], ttl_seconds: int
     ) -> None:
         await self._write_json(cache_key, {"url": logo_url}, ttl_seconds)
+
+    async def reserve_team_logo_lookups(
+        self, requested: int, limit: int = 20, window_seconds: int = 60
+    ) -> int:
+        """Atomically reserve shared provider request slots in Redis.
+
+        The shared TheSportsDB key allows 30 requests/minute. Staying below that
+        limit leaves room for traffic from other users of the public key.
+        """
+        if requested <= 0 or limit <= 0 or window_seconds <= 0:
+            return 0
+
+        client = await self._get_client()
+        if client is None:
+            return 0
+
+        script = """
+        local current = tonumber(redis.call('GET', KEYS[1]) or '0')
+        local limit = tonumber(ARGV[1])
+        local requested = tonumber(ARGV[2])
+        local available = math.max(0, limit - current)
+        local granted = math.min(requested, available)
+        if granted > 0 then
+            if current == 0 then
+                redis.call('SET', KEYS[1], granted, 'EX', ARGV[3])
+            else
+                redis.call('INCRBY', KEYS[1], granted)
+            end
+        end
+        return granted
+        """
+        try:
+            granted = await client.eval(
+                script,
+                1,
+                self.TEAM_LOGO_RATE_LIMIT_KEY,
+                limit,
+                requested,
+                window_seconds,
+            )
+            return int(granted)
+        except Exception as exc:
+            logger.warning("Failed reserving team-logo lookup slots (%s).", repr(exc))
+            self._redis_client = None
+            return 0
 
 
 redis_cache_service = RedisCacheService()

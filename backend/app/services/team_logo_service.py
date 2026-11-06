@@ -22,6 +22,7 @@ class TeamLogoService:
     BASE_URL = "https://www.thesportsdb.com/api/v1/json"
     TIMEOUT_SECONDS = 4.0
     MAX_CONCURRENT_LOOKUPS = 5
+    MAX_LOOKUPS_PER_MINUTE = 20
 
     SPORT_NAMES = {
         "soccer": "soccer",
@@ -131,6 +132,20 @@ class TeamLogoService:
             else:
                 pending.append(team_key)
 
+        if not pending:
+            return result
+
+        lookup_count = await redis_cache_service.reserve_team_logo_lookups(
+            requested=len(pending),
+            limit=self.MAX_LOOKUPS_PER_MINUTE,
+            window_seconds=60,
+        )
+        if lookup_count < len(pending):
+            logger.info(
+                "Team badge lookup budget reached; deferring %d team lookups.",
+                len(pending) - lookup_count,
+            )
+        pending = pending[:lookup_count]
         if not pending:
             return result
 
