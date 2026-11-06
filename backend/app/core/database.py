@@ -7,9 +7,9 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import settings
+from app.models.base import Base
 
 logger = logging.getLogger("betmetrics.database")
 
@@ -18,10 +18,6 @@ if not settings.DATABASE_URL:
         "DATABASE_URL is not configured. Set it to a PostgreSQL async URL, "
         "e.g. postgresql+asyncpg://betmetrics:<password>@db:5432/betmetrics."
     )
-
-
-class Base(DeclarativeBase):
-    """Base declarativa compartida por todos los modelos SQLAlchemy."""
 
 
 engine = create_async_engine(
