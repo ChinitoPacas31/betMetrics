@@ -119,7 +119,7 @@ export default function BetSlipSidebar() {
         stake: numericStake,
       });
 
-      placePaperBet({
+      await placePaperBet({
         matchId: activeSlip.matchId,
         matchName: activeSlip.matchName,
         league: activeSlip.league,

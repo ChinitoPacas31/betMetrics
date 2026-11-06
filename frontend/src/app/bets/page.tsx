@@ -22,6 +22,8 @@ export default function PaperBetsHistoryPage() {
     realizedPnL,
     roiPercentage,
     paperBets,
+    betsLoading,
+    betsError,
     settlePaperBet,
     deletePaperBet,
   } = useBetting();
@@ -201,8 +203,24 @@ export default function PaperBetsHistoryPage() {
         </div>
       </div>
 
+      {betsError && (
+        <div
+          role="alert"
+          className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-3.5 py-2.5 text-xs text-rose-300"
+        >
+          {betsError}
+        </div>
+      )}
+
       {/* Tabla de Historial de Boletos */}
-      {filteredBets.length === 0 ? (
+      {betsLoading && paperBets.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-sb-border bg-sb-panel px-4 py-14 text-center">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-sb-border border-t-sb-blue" />
+          <p className="mt-3 text-xs font-semibold text-slate-300">
+            Loading your paper bets from PostgreSQL...
+          </p>
+        </div>
+      ) : filteredBets.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-sb-border bg-sb-panel px-4 py-14 text-center">
           <IconBolt className="h-8 w-8 text-slate-500" />
           <p className="mt-2.5 text-sm font-bold text-slate-200">

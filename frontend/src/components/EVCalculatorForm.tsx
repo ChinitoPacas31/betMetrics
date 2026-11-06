@@ -103,25 +103,34 @@ export default function EVCalculatorForm() {
     }
   }
 
-  function handleSaveToPortfolio() {
+  async function handleSaveToPortfolio() {
     if (!result) return;
-    placePaperBet({
-      matchId: `custom-${Date.now()}`,
-      matchName: result.match_name,
-      league: "Manual Calculator",
-      selection: selectionLabel.trim() || result.match_name,
-      outcomeKey: "CUSTOM",
-      bookmaker: bookmaker.trim() || "Manual",
-      decimalOdds: result.decimal_odds,
-      impliedProbability: result.implied_probability,
-      trueProbability: result.true_probability,
-      stake: result.stake,
-      potentialProfit: result.potential_profit,
-      expectedValue: result.expected_value,
-      evPercentage: result.ev_percentage,
-      trafficLight: result.traffic_light,
-    });
-    setSavedNotice(true);
+    setErrorMessage(null);
+    try {
+      await placePaperBet({
+        matchId: `custom-${Date.now()}`,
+        matchName: result.match_name,
+        league: "Manual Calculator",
+        selection: selectionLabel.trim() || result.match_name,
+        outcomeKey: "CUSTOM",
+        bookmaker: bookmaker.trim() || "Manual",
+        decimalOdds: result.decimal_odds,
+        impliedProbability: result.implied_probability,
+        trueProbability: result.true_probability,
+        stake: result.stake,
+        potentialProfit: result.potential_profit,
+        expectedValue: result.expected_value,
+        evPercentage: result.ev_percentage,
+        trafficLight: result.traffic_light,
+      });
+      setSavedNotice(true);
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        setErrorMessage(err.payload.message);
+      } else {
+        setErrorMessage("Could not save this simulation to your portfolio.");
+      }
+    }
   }
 
   return (

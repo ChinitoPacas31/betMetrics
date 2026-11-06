@@ -8,10 +8,21 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { fetchSportsCatalog } from "@/lib/api";
+
+import { useAuth } from "@/context/AuthContext";
+import {
+  ApiClientError,
+  createPaperBet,
+  deleteAllPaperBets,
+  deletePaperBet as deletePaperBetRequest,
+  fetchPaperBets,
+  fetchSportsCatalog,
+  updatePaperBetStatus,
+} from "@/lib/api";
 import {
   BetSettlementStatus,
   OddsFormat,
+  PaperBetApiRecord,
   PaperBetRecord,
   SlipSelection,
   SportCatalogItem,
@@ -19,10 +30,7 @@ import {
 } from "@/types";
 
 const STORAGE_KEYS = {
-  ODDS_FORMAT: "betmetrics_odds_format_v1",
   ACTIVE_SPORT: "betmetrics_active_sport_v1",
-  STARTING_BANKROLL: "betmetrics_starting_bankroll_v1",
-  PAPER_BETS: "betmetrics_paper_bets_v1",
 };
 
 const DEFAULT_STARTING_BANKROLL = 10000;
@@ -70,14 +78,48 @@ interface BettingContextValue {
   mobileSlipOpen: boolean;
   setMobileSlipOpen: (open: boolean) => void;
   paperBets: PaperBetRecord[];
-  placePaperBet: (bet: PlaceBetInput) => PaperBetRecord;
-  settlePaperBet: (id: string, status: BetSettlementStatus) => void;
-  deletePaperBet: (id: string) => void;
+  betsLoading: boolean;
+  betsError: string | null;
+  placePaperBet: (bet: PlaceBetInput) => Promise<PaperBetRecord>;
+  settlePaperBet: (id: string, status: BetSettlementStatus) => Promise<void>;
+  deletePaperBet: (id: string) => Promise<void>;
 }
 
 const BettingContext = createContext<BettingContextValue | undefined>(undefined);
 
+function mapPaperBet(record: PaperBetApiRecord): PaperBetRecord {
+  return {
+    id: record.id,
+    placedAt: record.placed_at,
+    settledAt: record.settled_at || undefined,
+    matchId: record.match_id,
+    matchName: record.match_name,
+    league: record.league,
+    selection: record.selection,
+    outcomeKey: record.outcome_key,
+    bookmaker: record.bookmaker,
+    decimalOdds: record.decimal_odds,
+    impliedProbability: record.implied_probability,
+    trueProbability: record.true_probability,
+    stake: record.stake,
+    potentialProfit: record.potential_profit,
+    expectedValue: record.expected_value,
+    evPercentage: record.ev_percentage,
+    trafficLight: record.traffic_light,
+    status: record.status,
+  };
+}
+
+function requestErrorMessage(error: unknown): string {
+  if (error instanceof ApiClientError) {
+    return error.payload.message;
+  }
+  return "Could not sync your paper bets with the backend.";
+}
+
 export function BettingProvider({ children }: { children: React.ReactNode }) {
+  const { user, updateProfile, refreshUser } = useAuth();
+
   const [oddsFormat, setOddsFormatState] = useState<OddsFormat>("DECIMAL");
   const [sportsCatalog, setSportsCatalog] = useState<SportCatalogItem[]>([]);
   const [sportsLoading, setSportsLoading] = useState<boolean>(true);
@@ -90,37 +132,44 @@ export function BettingProvider({ children }: { children: React.ReactNode }) {
     DEFAULT_STARTING_BANKROLL
   );
   const [paperBets, setPaperBets] = useState<PaperBetRecord[]>([]);
+  const [betsLoading, setBetsLoading] = useState<boolean>(false);
+  const [betsError, setBetsError] = useState<string | null>(null);
   const [activeSlip, setActiveSlip] = useState<SlipSelection | null>(null);
   const [mobileSlipOpen, setMobileSlipOpen] = useState<boolean>(false);
-  const [hydrated, setHydrated] = useState<boolean>(false);
 
-  // Hidratación desde localStorage al montar
+  // Sincroniza las preferencias y el bankroll que viven en PostgreSQL.
   useEffect(() => {
-    try {
-      const savedFmt = localStorage.getItem(STORAGE_KEYS.ODDS_FORMAT);
-      if (savedFmt === "AMERICAN" || savedFmt === "DECIMAL") {
-        setOddsFormatState(savedFmt);
-      }
-      const savedBank = localStorage.getItem(STORAGE_KEYS.STARTING_BANKROLL);
-      if (savedBank) {
-        const parsed = Number(savedBank);
-        if (Number.isFinite(parsed) && parsed > 0) {
-          setStartingBankroll(parsed);
-        }
-      }
-      const savedBets = localStorage.getItem(STORAGE_KEYS.PAPER_BETS);
-      if (savedBets) {
-        const parsedBets = JSON.parse(savedBets);
-        if (Array.isArray(parsedBets)) {
-          setPaperBets(parsedBets);
-        }
-      }
-    } catch {
-      // Ignora bloqueos de almacenamiento privado
-    } finally {
-      setHydrated(true);
+    if (!user) return;
+    setStartingBankroll(Number(user.starting_bankroll));
+    setOddsFormatState(user.odds_format);
+  }, [user?.id, user?.starting_bankroll, user?.odds_format]);
+
+  // Carga el historial del usuario autenticado desde GET /api/v1/bets.
+  useEffect(() => {
+    if (!user) {
+      setPaperBets([]);
+      return;
     }
-  }, []);
+
+    let cancelled = false;
+    setBetsLoading(true);
+    setBetsError(null);
+
+    fetchPaperBets()
+      .then((records) => {
+        if (!cancelled) setPaperBets(records.map(mapPaperBet));
+      })
+      .catch((error) => {
+        if (!cancelled) setBetsError(requestErrorMessage(error));
+      })
+      .finally(() => {
+        if (!cancelled) setBetsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   // Carga 100% dinámica de deportes activos desde GET /api/v1/odds/sports
   const reloadSportsCatalog = useCallback(async () => {
@@ -173,34 +222,20 @@ export function BettingProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, []);
 
-  // Persistencia reactiva en localStorage
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      localStorage.setItem(STORAGE_KEYS.ODDS_FORMAT, oddsFormat);
-    } catch {}
-  }, [oddsFormat, hydrated]);
+  const setOddsFormat = useCallback(
+    (fmt: OddsFormat) => {
+      if (fmt === oddsFormat) return;
+      const previous = oddsFormat;
+      setOddsFormatState(fmt);
+      if (!user || user.odds_format === fmt) return;
 
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      localStorage.setItem(
-        STORAGE_KEYS.STARTING_BANKROLL,
-        String(startingBankroll)
-      );
-    } catch {}
-  }, [startingBankroll, hydrated]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      localStorage.setItem(STORAGE_KEYS.PAPER_BETS, JSON.stringify(paperBets));
-    } catch {}
-  }, [paperBets, hydrated]);
-
-  const setOddsFormat = useCallback((fmt: OddsFormat) => {
-    setOddsFormatState(fmt);
-  }, []);
+      updateProfile({ odds_format: fmt }).catch(() => {
+        setOddsFormatState(previous);
+        setBetsError("Could not save your odds format preference.");
+      });
+    },
+    [oddsFormat, user, updateProfile]
+  );
 
   const { pendingRisk, realizedPnL, settledVolume } = useMemo(() => {
     let pending = 0;
@@ -237,19 +272,41 @@ export function BettingProvider({ children }: { children: React.ReactNode }) {
     return Number(((realizedPnL / settledVolume) * 100).toFixed(2));
   }, [realizedPnL, settledVolume]);
 
-  const updateStartingBankroll = useCallback((amount: number) => {
-    if (Number.isFinite(amount) && amount >= 100) {
-      setStartingBankroll(Math.round(amount * 100) / 100);
-    }
-  }, []);
+  const updateStartingBankroll = useCallback(
+    (amount: number) => {
+      if (!Number.isFinite(amount) || amount < 100) return;
+      const rounded = Math.round(amount * 100) / 100;
+      const previous = startingBankroll;
+      setStartingBankroll(rounded);
+
+      updateProfile({ starting_bankroll: rounded }).catch(() => {
+        setStartingBankroll(previous);
+        setBetsError("Could not update your starting bankroll.");
+      });
+    },
+    [startingBankroll, updateProfile]
+  );
 
   const resetBankrollAndHistory = useCallback(
     (amount: number = DEFAULT_STARTING_BANKROLL) => {
       setStartingBankroll(amount);
       setPaperBets([]);
       setActiveSlip(null);
+      setBetsError(null);
+
+      void (async () => {
+        try {
+          await Promise.all([
+            updateProfile({ starting_bankroll: amount }),
+            deleteAllPaperBets(),
+          ]);
+        } catch (error) {
+          setBetsError(requestErrorMessage(error));
+          refreshUser().catch(() => {});
+        }
+      })();
     },
-    []
+    [updateProfile, refreshUser]
   );
 
   const selectOutcomeToSlip = useCallback((selection: SlipSelection) => {
@@ -269,50 +326,69 @@ export function BettingProvider({ children }: { children: React.ReactNode }) {
     setActiveSlip(null);
   }, []);
 
-  const placePaperBet = useCallback((input: PlaceBetInput): PaperBetRecord => {
-    const newRecord: PaperBetRecord = {
-      id: `pb-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      placedAt: new Date().toISOString(),
-      matchId: input.matchId,
-      matchName: input.matchName,
-      league: input.league,
-      selection: input.selection,
-      outcomeKey: input.outcomeKey,
-      bookmaker: input.bookmaker,
-      decimalOdds: input.decimalOdds,
-      impliedProbability: input.impliedProbability,
-      trueProbability: input.trueProbability,
-      stake: input.stake,
-      potentialProfit: input.potentialProfit,
-      expectedValue: input.expectedValue,
-      evPercentage: input.evPercentage,
-      trafficLight: input.trafficLight,
-      status: "PENDING",
-    };
-    setPaperBets((prev) => [newRecord, ...prev]);
-    return newRecord;
-  }, []);
-
-  const settlePaperBet = useCallback(
-    (id: string, status: BetSettlementStatus) => {
-      setPaperBets((prev) =>
-        prev.map((bet) =>
-          bet.id === id
-            ? {
-                ...bet,
-                status,
-                settledAt:
-                  status === "PENDING" ? undefined : new Date().toISOString(),
-              }
-            : bet
-        )
-      );
+  const placePaperBet = useCallback(
+    async (input: PlaceBetInput): Promise<PaperBetRecord> => {
+      const created = await createPaperBet({
+        match_id: input.matchId,
+        match_name: input.matchName,
+        league: input.league,
+        selection: input.selection,
+        outcome_key: input.outcomeKey,
+        bookmaker: input.bookmaker,
+        decimal_odds: input.decimalOdds,
+        true_probability: input.trueProbability,
+        stake: input.stake,
+      });
+      const record = mapPaperBet(created);
+      setPaperBets((prev) => [record, ...prev]);
+      setBetsError(null);
+      return record;
     },
     []
   );
 
-  const deletePaperBet = useCallback((id: string) => {
+  const settlePaperBet = useCallback(
+    async (id: string, status: BetSettlementStatus) => {
+      const optimisticSettledAt =
+        status === "PENDING" ? undefined : new Date().toISOString();
+
+      setPaperBets((prev) =>
+        prev.map((bet) =>
+          bet.id === id
+            ? { ...bet, status, settledAt: optimisticSettledAt }
+            : bet
+        )
+      );
+
+      try {
+        const updated = await updatePaperBetStatus(id, status);
+        setPaperBets((prev) =>
+          prev.map((bet) => (bet.id === id ? mapPaperBet(updated) : bet))
+        );
+        setBetsError(null);
+      } catch (error) {
+        setBetsError(requestErrorMessage(error));
+        try {
+          const records = await fetchPaperBets();
+          setPaperBets(records.map(mapPaperBet));
+        } catch {}
+      }
+    },
+    []
+  );
+
+  const deletePaperBet = useCallback(async (id: string) => {
     setPaperBets((prev) => prev.filter((bet) => bet.id !== id));
+    try {
+      await deletePaperBetRequest(id);
+      setBetsError(null);
+    } catch (error) {
+      setBetsError(requestErrorMessage(error));
+      try {
+        const records = await fetchPaperBets();
+        setPaperBets(records.map(mapPaperBet));
+      } catch {}
+    }
   }, []);
 
   const value = useMemo<BettingContextValue>(
@@ -342,6 +418,8 @@ export function BettingProvider({ children }: { children: React.ReactNode }) {
       mobileSlipOpen,
       setMobileSlipOpen,
       paperBets,
+      betsLoading,
+      betsError,
       placePaperBet,
       settlePaperBet,
       deletePaperBet,
@@ -369,6 +447,8 @@ export function BettingProvider({ children }: { children: React.ReactNode }) {
       clearSlip,
       mobileSlipOpen,
       paperBets,
+      betsLoading,
+      betsError,
       placePaperBet,
       settlePaperBet,
       deletePaperBet,
