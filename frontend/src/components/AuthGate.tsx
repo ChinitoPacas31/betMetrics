@@ -31,21 +31,24 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const isAuthRoute = pathname === "/login" || pathname === "/register";
+  const isPublicLanding = pathname === "/";
 
   useEffect(() => {
     if (isLoading) return;
-    if (!isAuthenticated && !isAuthRoute) {
+    if (!isAuthenticated && !isAuthRoute && !isPublicLanding) {
       router.replace("/login");
     } else if (isAuthenticated && isAuthRoute) {
       router.replace("/");
     }
-  }, [isAuthenticated, isAuthRoute, isLoading, router]);
+  }, [isAuthenticated, isAuthRoute, isLoading, isPublicLanding, router]);
 
   if (isLoading) return <BootScreen />;
 
   if (isAuthRoute) {
     return isAuthenticated ? <BootScreen /> : <>{children}</>;
   }
+
+  if (isPublicLanding && !isAuthenticated) return <>{children}</>;
 
   if (!isAuthenticated) return <BootScreen />;
 
