@@ -12,6 +12,94 @@ GET http://localhost:8000/health
 Accept: application/json
 
 ### ============================================================================
+### 0.1 POST /api/v1/auth/register - Crear cuenta (201 Created)
+### Cambia el email si vuelves a ejecutar esta petición (el email es único)
+### ============================================================================
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "demo@betmetrics.local",
+  "password": "demo-password-123",
+  "display_name": "Demo Bettor"
+}
+
+### ============================================================================
+### 0.2 POST /api/v1/auth/login - Iniciar sesión (200 OK)
+### ============================================================================
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "demo@betmetrics.local",
+  "password": "demo-password-123"
+}
+
+### ============================================================================
+### 0.3 GET /api/v1/auth/me - Perfil autenticado (200 OK)
+### ============================================================================
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{login.response.body.access_token}}
+Accept: application/json
+
+### ============================================================================
+### 0.4 POST /api/v1/auth/login - Credenciales inválidas (401 Unauthorized)
+### ============================================================================
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "demo@betmetrics.local",
+  "password": "wrong-password"
+}
+
+### ============================================================================
+### 0.5 GET /api/v1/bets - Historial del usuario (200 OK)
+### ============================================================================
+GET {{baseUrl}}/bets
+Authorization: Bearer {{login.response.body.access_token}}
+Accept: application/json
+
+### ============================================================================
+### 0.6 POST /api/v1/bets - Registrar paper bet validado por el backend (201 Created)
+### ============================================================================
+# @name createBet
+POST {{baseUrl}}/bets
+Authorization: Bearer {{login.response.body.access_token}}
+Content-Type: application/json
+
+{
+  "match_id": "test-event-001",
+  "match_name": "Querétaro vs Puebla",
+  "league": "Liga MX",
+  "selection": "Querétaro",
+  "outcome_key": "1",
+  "bookmaker": "Pinnacle",
+  "decimal_odds": 2.20,
+  "true_probability": 0.50,
+  "stake": 100.0
+}
+
+### ============================================================================
+### 0.7 PATCH /api/v1/bets/{id} - Liquidar como WON (200 OK)
+### ============================================================================
+PATCH {{baseUrl}}/bets/{{createBet.response.body.id}}
+Authorization: Bearer {{login.response.body.access_token}}
+Content-Type: application/json
+
+{
+  "status": "WON"
+}
+
+### ============================================================================
+### 0.8 DELETE /api/v1/bets/{id} - Eliminar el paper bet (204 No Content)
+### ============================================================================
+DELETE {{baseUrl}}/bets/{{createBet.response.body.id}}
+Authorization: Bearer {{login.response.body.access_token}}
+
+### ============================================================================
 ### 1. GET /api/v1/odds/sports - Catálogo dinámico real de ligas activas (200 OK)
 ### ============================================================================
 GET {{baseUrl}}/odds/sports
