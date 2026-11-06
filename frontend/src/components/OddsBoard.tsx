@@ -16,28 +16,6 @@ import MatchRow from "./MatchRow";
 
 type SortMode = "BEST_EV" | "KICKOFF";
 
-function getSourceBadgeConfig(source: string) {
-  if (source === "rapidapi_live") {
-    return null;
-  }
-  if (source === "redis_cache") {
-    return {
-      label: "REDIS • 5M CACHE",
-      className: "border-blue-500/35 bg-blue-500/12 text-blue-300",
-    };
-  }
-  if (source === "redis_stale_429") {
-    return {
-      label: "REDIS BACKUP • HTTP 429",
-      className: "border-amber-500/45 bg-amber-500/15 text-amber-300",
-    };
-  }
-  return {
-    label: "REDIS BACKUP • OFFLINE",
-    className: "border-amber-500/45 bg-amber-500/15 text-amber-300",
-  };
-}
-
 export default function OddsBoard() {
   const {
     sportsCatalog,
@@ -219,7 +197,6 @@ export default function OddsBoard() {
   const showBoardSkeleton =
     isLoading || (sportsLoading && !activeSport && !sportsError);
   const activeError = error || (!activeSport ? sportsError : null);
-  const badgeConfig = data ? getSourceBadgeConfig(data.source) : null;
 
   return (
     <div className="min-w-0 flex-1 space-y-3">
@@ -267,23 +244,9 @@ export default function OddsBoard() {
             <div className="flex h-9 w-9 items-center justify-center rounded-md border border-blue-500/30 bg-sb-blue/15 text-blue-400">
               {getSportIcon(activeLeagueMeta.sport_key, "h-4 w-4")}
             </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-base font-extrabold tracking-tight text-white sm:text-lg">
-                  {activeLeagueMeta.title}
-                </h1>
-                {badgeConfig && (
-                  <span
-                    className={`rounded border px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase ${badgeConfig.className}`}
-                  >
-                    {badgeConfig.label}
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-400">
-                100% real-time data via The Odds API • De-Vigged Sharp Consensus
-              </p>
-            </div>
+            <h1 className="text-base font-extrabold tracking-tight text-white sm:text-lg">
+              {activeLeagueMeta.title}
+            </h1>
           </div>
 
           {/* Controles Rápidos: Stake Base + Refrescar */}
