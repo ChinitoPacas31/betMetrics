@@ -225,12 +225,10 @@ export function BettingProvider({ children }: { children: React.ReactNode }) {
   const setOddsFormat = useCallback(
     (fmt: OddsFormat) => {
       if (fmt === oddsFormat) return;
-      const previous = oddsFormat;
       setOddsFormatState(fmt);
       if (!user || user.odds_format === fmt) return;
 
       updateProfile({ odds_format: fmt }).catch(() => {
-        setOddsFormatState(previous);
         setBetsError("Could not save your odds format preference.");
       });
     },
