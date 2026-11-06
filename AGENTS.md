@@ -5,7 +5,7 @@ Decoupled +EV sportsbook scanner: FastAPI backend + PostgreSQL 16 + Redis cache 
 ## Running
 
 - Full backend stack: from repo root, `cp .env.example .env`, fill `REDIS_PASSWORD`, `POSTGRES_PASSWORD`, `JWT_SECRET_KEY`, `RAPIDAPI_KEY`, `API_SECRET_TOKEN`, then `docker compose up --build -d`. This starts PostgreSQL, Redis, and FastAPI. API at `http://localhost:8000`, Swagger `/docs`, health `/health`.
-- Frontend is **not** in docker-compose and there is no root `package.json`: `cd frontend && cp .env.example .env.local && npm install && npm run dev` (`http://localhost:3000`). Unauthenticated visits redirect to `/login`; create the first account at `/register` (no seeded users).
+- Frontend is **not** in docker-compose and there is no root `package.json`: `cd frontend && cp .env.example .env.local && npm install && npm run dev` (`http://localhost:3000`). Unauthenticated visitors see the public landing at `/`; protected routes redirect to `/login`; create the first account at `/register` (no seeded users).
 - Compose mounts `backend/app` read-only with `uvicorn --reload`, so code edits hot-reload. Dependency changes require `docker compose up --build -d`.
 - `backend/app/core/config.py` loads `.env` relative to the process CWD. In Docker, settings come from compose `env_file`/`environment`; when running uvicorn directly from `backend/`, copy `backend/.env.example` to `backend/.env` or export vars.
 - Tables `users` and `paper_bets` are created by SQLAlchemy `create_all` during the FastAPI lifespan. There is no Alembic: changing an existing model column requires a migration or a destructive `docker compose down -v`. `create_all` will not alter existing tables.
@@ -37,7 +37,7 @@ Decoupled +EV sportsbook scanner: FastAPI backend + PostgreSQL 16 + Redis cache 
 ## Frontend
 
 - Next.js App Router under `frontend/src/app`; imports use `@/*` → `src/*`. Interactive pages/components are `"use client"`.
-- `AuthProvider` wraps the app in `layout.tsx`; `AuthGate` redirects unauthenticated visitors to `/login` and mounts `BettingProvider` + `Navbar` only for authenticated routes. `/login` and `/register` render outside that shell.
+- `AuthProvider` wraps the app in `layout.tsx`; `AuthGate` allows the public landing at `/` and redirects unauthenticated visitors to `/login` for protected routes. It mounts `BettingProvider` + `Navbar` only for authenticated routes; `/login` and `/register` render outside that shell.
 - `BettingContext` now loads bankroll, odds format, and paper bets from the API. Only the active sport preference remains in `localStorage` (`betmetrics_active_sport_v1`); bankroll and bets are no longer persisted locally.
 - HTTP calls are centralized in `frontend/src/lib/api.ts` and use `NEXT_PUBLIC_API_BASE_URL` (default `http://localhost:8000/api/v1`). `NEXT_PUBLIC_*` is inlined at build/dev start, so restart dev after changing it.
 - `OddsBoard` renders `MatchRow`; `MatchCard.tsx` is an unused thin wrapper around `MatchRow` — edit `MatchRow` for actual match-row UI changes.

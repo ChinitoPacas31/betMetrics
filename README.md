@@ -57,7 +57,7 @@ betMetrics/
     └── src/
         ├── app/
         │   ├── layout.tsx              # Shell global, AuthProvider/AuthGate y metadatos/favicon
-        │   ├── page.tsx                # Vista principal Sportsbook de 3 columnas
+        │   ├── page.tsx                # Landing pública o Sportsbook de 3 columnas según sesión
         │   ├── login/page.tsx          # Inicio de sesión JWT
         │   ├── register/page.tsx       # Registro de cuenta
         │   ├── bets/page.tsx           # Historial y liquidación de Paper Bets (P&L y ROI%)
@@ -122,7 +122,7 @@ npm run dev
 
 - **Aplicación Web Sportsbook:** `http://localhost:3000`
 
-Al abrir la web se redirige a `/login`. Crea la primera cuenta desde `/register`; no hay usuarios semilla ni credenciales hardcodeadas.
+Al abrir la web, los visitantes sin sesión ven la landing pública en `/`; al iniciar sesión, `/` muestra el sportsbook y las rutas protegidas redirigen a `/login`. Crea la primera cuenta desde `/register`; no hay usuarios semilla ni credenciales hardcodeadas.
 
 ---
 
