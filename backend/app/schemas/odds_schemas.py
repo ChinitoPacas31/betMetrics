@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 from app.schemas.ev_schemas import TrafficLightColor
 
@@ -32,6 +32,8 @@ class MatchOddsEVItem(BaseModel):
     bookmakers_count: int = 1
     home_team: str
     away_team: str
+    home_team_logo: Optional[str] = None
+    away_team_logo: Optional[str] = None
     commence_time: str
     bookmaker: str
     selection: str

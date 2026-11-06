@@ -111,5 +111,18 @@ class RedisCacheService:
             self.SPORTS_STALE_KEY, sports, settings.STALE_CACHE_TTL_SECONDS
         )
 
+    async def get_team_logo(self, cache_key: str) -> tuple[bool, Optional[str]]:
+        """Returns (found_in_cache, logo_url); cached misses are represented by None."""
+        value = await self._read_json(cache_key)
+        if not isinstance(value, dict) or "url" not in value:
+            return False, None
+        url = value["url"]
+        return True, url if isinstance(url, str) and url else None
+
+    async def set_team_logo(
+        self, cache_key: str, logo_url: Optional[str], ttl_seconds: int
+    ) -> None:
+        await self._write_json(cache_key, {"url": logo_url}, ttl_seconds)
+
 
 redis_cache_service = RedisCacheService()

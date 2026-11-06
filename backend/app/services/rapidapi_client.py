@@ -13,6 +13,7 @@ from app.schemas.odds_schemas import (
 )
 from app.services.ev_calculator import EVCalculatorService
 from app.services.redis_cache import redis_cache_service
+from app.services.team_logo_service import team_logo_service
 
 logger = logging.getLogger("betmetrics.rapidapi")
 
@@ -430,6 +431,22 @@ class RapidAPIClientService:
                     outcomes=outcome_items,
                 )
             )
+
+        logo_teams = [
+            (item.sport_key, team_name)
+            for item in enriched_items
+            for team_name in (item.home_team, item.away_team)
+        ]
+        team_logos = await team_logo_service.resolve_logos(logo_teams)
+        enriched_items = [
+            item.model_copy(
+                update={
+                    "home_team_logo": team_logos.get((item.sport_key, item.home_team)),
+                    "away_team_logo": team_logos.get((item.sport_key, item.away_team)),
+                }
+            )
+            for item in enriched_items
+        ]
 
         return OddsEVListResponse(
             sport=sport,

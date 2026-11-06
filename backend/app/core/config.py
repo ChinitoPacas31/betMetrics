@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     API_SECRET_TOKEN: str = ""
     RAPIDAPI_KEY: str = ""
     RAPIDAPI_HOST: str = "odds.p.rapidapi.com"
+    THESPORTSDB_API_KEY: str = ""
+    TEAM_LOGO_CACHE_TTL_SECONDS: int = 2592000
+    TEAM_LOGO_MISS_CACHE_TTL_SECONDS: int = 86400
     REDIS_URL: str = "redis://localhost:6379/0"
     DATABASE_URL: str = ""
     JWT_SECRET_KEY: str = ""

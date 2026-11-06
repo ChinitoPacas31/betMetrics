@@ -11,6 +11,35 @@ interface MatchRowProps {
   match: MatchOddsEVItem;
 }
 
+function TeamBadge({ team, logoUrl }: { team: string; logoUrl?: string | null }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const initials = team
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+
+  return (
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full border border-sb-border-light bg-sb-canvas">
+      {logoUrl && !imageFailed ? (
+        <img
+          src={logoUrl}
+          alt={`${team} logo`}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setImageFailed(true)}
+          className="h-full w-full object-contain p-0.5"
+        />
+      ) : (
+        <span aria-hidden="true" className="text-[8px] font-bold text-slate-400">
+          {initials || "?"}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export default function MatchRow({ match }: MatchRowProps) {
   const {
     oddsFormat,
@@ -93,8 +122,15 @@ export default function MatchRow({ match }: MatchRowProps) {
           {/* Equipos apilados */}
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
-              <span className="truncate text-[13px] font-semibold text-white">
-                {match.home_team}
+              <span className="flex min-w-0 items-center gap-1.5">
+                <TeamBadge
+                  key={`${match.home_team}:${match.home_team_logo || ""}`}
+                  team={match.home_team}
+                  logoUrl={match.home_team_logo}
+                />
+                <span className="truncate text-[13px] font-semibold text-white">
+                  {match.home_team}
+                </span>
               </span>
               {hasHighValue && (
                 <span className="shrink-0 rounded border border-emerald-500/35 bg-emerald-500/12 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-400 tabular-nums">
@@ -103,8 +139,15 @@ export default function MatchRow({ match }: MatchRowProps) {
               )}
             </div>
             <div className="mt-0.5 flex items-center justify-between gap-2">
-              <span className="truncate text-[13px] font-semibold text-slate-200">
-                {match.away_team}
+              <span className="flex min-w-0 items-center gap-1.5">
+                <TeamBadge
+                  key={`${match.away_team}:${match.away_team_logo || ""}`}
+                  team={match.away_team}
+                  logoUrl={match.away_team_logo}
+                />
+                <span className="truncate text-[13px] font-semibold text-slate-200">
+                  {match.away_team}
+                </span>
               </span>
               <span className="shrink-0 text-[10px] text-slate-500">
                 {match.bookmakers_count || 1}{" "}
@@ -308,4 +351,3 @@ export default function MatchRow({ match }: MatchRowProps) {
     </div>
   );
 }
-

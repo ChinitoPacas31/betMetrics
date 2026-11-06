@@ -46,6 +46,8 @@ export interface MatchOddsEVItem {
   bookmakers_count?: number;
   home_team: string;
   away_team: string;
+  home_team_logo?: string | null;
+  away_team_logo?: string | null;
   commence_time: string;
   bookmaker: string;
   selection: string;
