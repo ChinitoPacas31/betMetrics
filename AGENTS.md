@@ -8,7 +8,7 @@ Decoupled +EV sportsbook scanner: FastAPI backend + PostgreSQL 16 + Redis cache 
 - Frontend is **not** in docker-compose and there is no root `package.json`: `cd frontend && cp .env.example .env.local && npm install && npm run dev` (`http://localhost:3000`). Unauthenticated visitors see the public landing at `/`; protected routes redirect to `/login`; create the first account at `/register` (no seeded users).
 - Compose mounts `backend/app` read-only with `uvicorn --reload`, so code edits hot-reload. Dependency changes require `docker compose up --build -d`.
 - `backend/app/core/config.py` loads `.env` relative to the process CWD. In Docker, settings come from compose `env_file`/`environment`; when running uvicorn directly from `backend/`, copy `backend/.env.example` to `backend/.env` or export vars.
-- Tables `users` and `paper_bets` are created by SQLAlchemy `create_all` during the FastAPI lifespan. There is no Alembic: changing an existing model column requires a migration or a destructive `docker compose down -v`. `create_all` will not alter existing tables.
+- Tables `users` and `paper_bets` are created by SQLAlchemy `create_all` during the FastAPI lifespan. Models live in `backend/app/models/` (`base.py`, `user.py`, `paper_bet.py`). There is no Alembic: changing an existing model column requires a migration or a destructive `docker compose down -v`. `create_all` will not alter existing tables.
 - Secrets are gitignored; only `.env.example` files are tracked. Never add fallback secret values in code.
 
 ## Verification

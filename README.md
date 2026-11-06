@@ -23,7 +23,11 @@ betMetrics/
 │   ├── Dockerfile
 │   └── app/
 │       ├── main.py                     # App FastAPI, lifespan DB, CORS, headers HTTP y escudo OWASP
-│       ├── models.py                   # Modelos SQLAlchemy: User y PaperBet
+│       ├── models/
+│       │   ├── __init__.py             # Exporta Base, User y PaperBet
+│       │   ├── base.py                 # Base declarativa y utilidades ORM
+│       │   ├── user.py                 # Modelo User
+│       │   └── paper_bet.py            # Modelo PaperBet
 │       ├── core/
 │       │   ├── config.py               # Configuración tipada desde variables de entorno
 │       │   ├── database.py             # Engine async, sesión y creación idempotente de tablas
